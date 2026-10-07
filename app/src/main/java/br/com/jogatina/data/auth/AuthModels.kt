@@ -32,3 +32,13 @@ sealed interface AuthResult<out T> {
     data class Success<T>(val value: T) : AuthResult<T>
     data class Error(val message: String, val statusCode: Int? = null) : AuthResult<Nothing>
 }
+
+inline fun <T, R> AuthResult<T>.map(transform: (T) -> R): AuthResult<R> =
+    when (this) {
+        is AuthResult.Success -> try {
+            AuthResult.Success(transform(value))
+        } catch (e: Exception) {
+            AuthResult.Error("Resposta inválida da API: ${e.message}")
+        }
+        is AuthResult.Error -> this
+    }

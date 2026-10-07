@@ -249,7 +249,7 @@ private fun DiscordEnterButton(
                         painter = painterResource(R.drawable.ic_discord),
                         contentDescription = "Discord",
                         modifier = Modifier.size(26.dp),
-                        tint = Color.Unspecified
+                        tint = JogatinaWhite
                     )
                 }
                 Box(

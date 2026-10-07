@@ -29,6 +29,22 @@ class TokenStore(context: Context) {
     val accessToken: String? get() = prefs.getString(KEY_ACCESS, null)
     val isLoggedIn: Boolean get() = !accessToken.isNullOrBlank()
 
+    /**
+     * Id do usuário atual (claim `sub` do JWT), sem validar assinatura.
+     * Serve só para marcar "meus posts" na UI; a API continua autorizando tudo.
+     */
+    val userId: String?
+        get() {
+            val payload = accessToken?.split(".")?.getOrNull(1) ?: return null
+            return try {
+                val padded = payload.padEnd(payload.length + (4 - payload.length % 4) % 4, '=')
+                val json = String(android.util.Base64.decode(padded, android.util.Base64.URL_SAFE))
+                org.json.JSONObject(json).optString("sub").ifBlank { null }
+            } catch (_: Exception) {
+                null
+            }
+        }
+
     private companion object {
         const val KEY_ACCESS = "access_token"
         const val KEY_REFRESH = "refresh_token"

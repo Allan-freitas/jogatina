@@ -21,18 +21,31 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.tooling.preview.PreviewScreenSizes
+import br.com.jogatina.data.api.ApiClient
 import br.com.jogatina.data.auth.AuthRepository
 import br.com.jogatina.data.auth.TokenStore
+import br.com.jogatina.data.feed.FeedRepository
+import br.com.jogatina.ui.feed.FeedScreen
+import br.com.jogatina.ui.feed.FeedViewModel
 import br.com.jogatina.ui.theme.JogatinaTheme
 import br.com.jogatina.ui.welcome.WelcomeScreen
 import br.com.jogatina.ui.welcome.WelcomeViewModel
 
 class MainActivity : ComponentActivity() {
 
+    private val apiClient by lazy { ApiClient(AuthRepository.DEFAULT_BASE_URL) }
     private val authRepository by lazy { AuthRepository() }
     private val tokenStore by lazy { TokenStore(applicationContext) }
+    private val feedRepository by lazy {
+        FeedRepository(apiClient) { tokenStore.accessToken }
+    }
     private val welcomeViewModel: WelcomeViewModel by viewModels {
         WelcomeViewModel.factory(authRepository, tokenStore)
+    }
+    private val feedViewModel: FeedViewModel by viewModels {
+        FeedViewModel.factory(feedRepository, tokenStore) {
+            welcomeViewModel.logout()
+        }
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -42,7 +55,10 @@ class MainActivity : ComponentActivity() {
             JogatinaTheme {
                 val welcomeState by welcomeViewModel.state.collectAsState()
                 if (welcomeState.loggedIn) {
-                    JogatinaApp()
+                    JogatinaApp(
+                        feedViewModel = feedViewModel,
+                        onLogout = { welcomeViewModel.logout() }
+                    )
                 } else {
                     WelcomeScreen(viewModel = welcomeViewModel)
                 }
@@ -53,7 +69,10 @@ class MainActivity : ComponentActivity() {
 
 @PreviewScreenSizes
 @Composable
-fun JogatinaApp() {
+fun JogatinaApp(
+    feedViewModel: FeedViewModel? = null,
+    onLogout: () -> Unit = {}
+) {
     var currentDestination by rememberSaveable { mutableStateOf(AppDestinations.HOME) }
 
     NavigationSuiteScaffold(
@@ -74,10 +93,18 @@ fun JogatinaApp() {
         }
     ) {
         Scaffold(modifier = Modifier.fillMaxSize()) { innerPadding ->
-            Greeting(
-                name = "Android",
-                modifier = Modifier.padding(innerPadding)
-            )
+            if (currentDestination == AppDestinations.HOME && feedViewModel != null) {
+                FeedScreen(
+                    viewModel = feedViewModel,
+                    onLogout = onLogout,
+                    modifier = Modifier.padding(innerPadding)
+                )
+            } else {
+                Greeting(
+                    name = "Android",
+                    modifier = Modifier.padding(innerPadding)
+                )
+            }
         }
     }
 }
