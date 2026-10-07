@@ -27,6 +27,17 @@ Após o login o usuário cai no **Feed**, estilo newsfeed do Olympus
   (`parentCommentId`).
 - 401 (token expirado) desloga automaticamente para a welcome.
 
+## Games (biblioteca + catálogo)
+
+- Aba **Favorites → "Meus Jogos"**: biblioteca (`GET users/me/games`) com
+  capa (Coil, fallback com inicial), chip de status (Quero jogar/Jogando/
+  Zerado), estrela de favorito, filtro por status e remoção.
+- Lupa na TopAppBar abre o **Catálogo** (`GET games` com busca + debounce,
+  filtros de gênero/plataforma, grid 2 colunas, "carregar mais"): botão ＋
+  abre dialog de status + favorito (`POST users/me/games`).
+- A API não tem update: 409 `AlreadyInLibrary` oferece **atualizar** e a
+  troca de status/favorito é **DELETE + POST**.
+
 ## Estrutura
 
 ```
@@ -41,6 +52,9 @@ app/src/main/java/br/com/jogatina/
 ├── data/feed/
 │   ├── FeedModels.kt          # PostDto, CommentDto, LikeResult
 │   └── FeedRepository.kt      # feed/... com Bearer
+├── data/games/
+│   ├── GameModels.kt          # GameDto, MyGameDto, GameStatus
+│   └── GamesRepository.kt     # games + users/me/games com Bearer
 └── ui/
     ├── theme/                 # paleta navy + magenta (dynamicColor off)
     ├── welcome/
@@ -49,6 +63,10 @@ app/src/main/java/br/com/jogatina/
     └── feed/
         ├── FeedScreen.kt      # composer, cards, likes, comentários
         └── FeedViewModel.kt
+    └── games/
+        ├── GamesScreens.kt    # biblioteca, catálogo, dialog de status
+        ├── LibraryViewModel.kt
+        └── CatalogViewModel.kt
 ```
 
 ## API
@@ -67,6 +85,10 @@ Base de produção: `https://agfapp.com` (ver `AuthRepository.DEFAULT_BASE_URL`)
 | Comentários       | `GET /feed/posts/{id}/comments` | 1º nível + `replies` |
 | Comentar/responder| `POST /feed/posts/{id}/comments` | `content`, `parentCommentId?` → Id |
 | Apagar post       | `DELETE /feed/posts/{id}` | só o autor → Id |
+| Catálogo          | `GET /games`          | `?search=&genre=&platform=&minPopularity=&page=&pageSize=` (anônimo) |
+| Minha biblioteca  | `GET /users/me/games` | jogos salvos (status, favorito, capa) |
+| Adicionar         | `POST /users/me/games` | `gameId`, `status` (Wishlist/Playing/Completed), `isFavorite` |
+| Remover           | `DELETE /users/me/games/{id}` | 204 (troca de status = DELETE + POST) |
 | Saúde             | `GET /health`         | status da API + banco |
 
 Erros vêm em `problem+json` (`Users.NotFoundByEmail`, validações, …) e são
@@ -97,6 +119,9 @@ Contratos espelham `CleanArchitecture.slnx`:
   `Add_Feed`).
 - Imagens salvas em `wwwroot/uploads` (`IFileStorage`/`LocalFileStorage`,
   servidas via `UseStaticFiles`).
+- Capas dos jogos em `wwwroot/game-covers` (geradas como placeholder neon em
+  `gen_covers.py`; troque pelos JPGs finais mantendo os nomes), campo
+  `Game.CoverImageUrl` + migration `Add_GameCovers`.
 
 > Deploy: a migration `Add_Feed` precisa ser aplicada no banco de produção
 > (`dotnet ef database update` ou step do pipeline — `ApplyMigrations` só

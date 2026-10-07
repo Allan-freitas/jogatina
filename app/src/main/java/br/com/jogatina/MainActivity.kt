@@ -27,6 +27,11 @@ import br.com.jogatina.data.auth.TokenStore
 import br.com.jogatina.data.feed.FeedRepository
 import br.com.jogatina.ui.feed.FeedScreen
 import br.com.jogatina.ui.feed.FeedViewModel
+import br.com.jogatina.data.games.GamesRepository
+import br.com.jogatina.ui.games.CatalogScreen
+import br.com.jogatina.ui.games.CatalogViewModel
+import br.com.jogatina.ui.games.LibraryScreen
+import br.com.jogatina.ui.games.LibraryViewModel
 import br.com.jogatina.ui.theme.JogatinaTheme
 import br.com.jogatina.ui.welcome.WelcomeScreen
 import br.com.jogatina.ui.welcome.WelcomeViewModel
@@ -39,6 +44,9 @@ class MainActivity : ComponentActivity() {
     private val feedRepository by lazy {
         FeedRepository(apiClient) { tokenStore.accessToken }
     }
+    private val gamesRepository by lazy {
+        GamesRepository(apiClient) { tokenStore.accessToken }
+    }
     private val welcomeViewModel: WelcomeViewModel by viewModels {
         WelcomeViewModel.factory(authRepository, tokenStore)
     }
@@ -46,6 +54,19 @@ class MainActivity : ComponentActivity() {
         FeedViewModel.factory(feedRepository, tokenStore) {
             welcomeViewModel.logout()
         }
+    }
+    private val libraryViewModel: LibraryViewModel by viewModels {
+        LibraryViewModel.factory(gamesRepository) {
+            welcomeViewModel.logout()
+        }
+    }
+    private val catalogViewModel: CatalogViewModel by viewModels {
+        CatalogViewModel.factory(
+            gamesRepository,
+            inLibraryIds = { libraryViewModel.state.value.games.map { it.gameId }.toSet() },
+            onLibraryChanged = { libraryViewModel.refresh() },
+            onAuthExpired = { welcomeViewModel.logout() }
+        )
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -57,6 +78,8 @@ class MainActivity : ComponentActivity() {
                 if (welcomeState.loggedIn) {
                     JogatinaApp(
                         feedViewModel = feedViewModel,
+                        libraryViewModel = libraryViewModel,
+                        catalogViewModel = catalogViewModel,
                         onLogout = { welcomeViewModel.logout() }
                     )
                 } else {
@@ -71,9 +94,12 @@ class MainActivity : ComponentActivity() {
 @Composable
 fun JogatinaApp(
     feedViewModel: FeedViewModel? = null,
+    libraryViewModel: LibraryViewModel? = null,
+    catalogViewModel: CatalogViewModel? = null,
     onLogout: () -> Unit = {}
 ) {
     var currentDestination by rememberSaveable { mutableStateOf(AppDestinations.HOME) }
+    var showCatalog by rememberSaveable { mutableStateOf(false) }
 
     NavigationSuiteScaffold(
         navigationSuiteItems = {
@@ -93,17 +119,34 @@ fun JogatinaApp(
         }
     ) {
         Scaffold(modifier = Modifier.fillMaxSize()) { innerPadding ->
-            if (currentDestination == AppDestinations.HOME && feedViewModel != null) {
-                FeedScreen(
-                    viewModel = feedViewModel,
-                    onLogout = onLogout,
-                    modifier = Modifier.padding(innerPadding)
-                )
-            } else {
-                Greeting(
-                    name = "Android",
-                    modifier = Modifier.padding(innerPadding)
-                )
+            when {
+                showCatalog && catalogViewModel != null -> {
+                    CatalogScreen(
+                        viewModel = catalogViewModel,
+                        onBack = { showCatalog = false },
+                        modifier = Modifier.padding(innerPadding)
+                    )
+                }
+                currentDestination == AppDestinations.HOME && feedViewModel != null -> {
+                    FeedScreen(
+                        viewModel = feedViewModel,
+                        onLogout = onLogout,
+                        modifier = Modifier.padding(innerPadding)
+                    )
+                }
+                currentDestination == AppDestinations.FAVORITES && libraryViewModel != null -> {
+                    LibraryScreen(
+                        viewModel = libraryViewModel,
+                        onSearchCatalog = { showCatalog = true },
+                        modifier = Modifier.padding(innerPadding)
+                    )
+                }
+                else -> {
+                    Greeting(
+                        name = "Android",
+                        modifier = Modifier.padding(innerPadding)
+                    )
+                }
             }
         }
     }
