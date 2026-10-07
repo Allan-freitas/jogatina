@@ -23,12 +23,15 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ChatBubbleOutline
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.DeleteOutline
-import androidx.compose.material.icons.filled.ExitToApp
+import androidx.compose.material.icons.automirrored.filled.ExitToApp
+import androidx.compose.material.icons.automirrored.filled.Send
 import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.FavoriteBorder
 import androidx.compose.material.icons.filled.Image
+import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material.icons.filled.Refresh
-import androidx.compose.material.icons.filled.Send
+import androidx.compose.material3.Badge
+import androidx.compose.material3.BadgedBox
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
@@ -79,6 +82,8 @@ import java.time.Instant
 fun FeedScreen(
     viewModel: FeedViewModel,
     onLogout: () -> Unit,
+    unreadCount: Int = 0,
+    onNotificationsClick: () -> Unit = {},
     modifier: Modifier = Modifier
 ) {
     val state by viewModel.state.collectAsState()
@@ -105,11 +110,27 @@ fun FeedScreen(
             TopAppBar(
                 title = { Text("Feed", fontWeight = FontWeight.Bold) },
                 actions = {
+                    IconButton(onClick = onNotificationsClick) {
+                        BadgedBox(
+                            badge = {
+                                if (unreadCount > 0) {
+                                    Badge(
+                                        containerColor = JogatinaDiscordRed,
+                                        contentColor = JogatinaWhite
+                                    ) {
+                                        Text(if (unreadCount > 99) "99+" else "$unreadCount")
+                                    }
+                                }
+                            }
+                        ) {
+                            Icon(Icons.Filled.Notifications, contentDescription = "Notificações")
+                        }
+                    }
                     IconButton(onClick = { viewModel.refresh() }) {
                         Icon(Icons.Filled.Refresh, contentDescription = "Atualizar")
                     }
                     IconButton(onClick = onLogout) {
-                        Icon(Icons.Filled.ExitToApp, contentDescription = "Sair")
+                        Icon(Icons.AutoMirrored.Filled.ExitToApp, contentDescription = "Sair")
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(
@@ -394,7 +415,7 @@ private fun PostCard(
                         if (sendingComment) {
                             CircularProgressIndicator(color = JogatinaWhite, strokeWidth = 2.dp, modifier = Modifier.size(18.dp))
                         } else {
-                            Icon(Icons.Filled.Send, contentDescription = "Enviar", tint = JogatinaMagenta)
+                            Icon(Icons.AutoMirrored.Filled.Send, contentDescription = "Enviar", tint = JogatinaMagenta)
                         }
                     }
                 }

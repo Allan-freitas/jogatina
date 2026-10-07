@@ -22,6 +22,9 @@ class ApiClient(val baseUrl: String) {
     suspend fun postEmpty(path: String, token: String? = null): AuthResult<String> =
         withContext(Dispatchers.IO) { request("POST", path, null, token) }
 
+    suspend fun patchEmpty(path: String, token: String? = null): AuthResult<String> =
+        withContext(Dispatchers.IO) { request("PATCH", path, null, token) }
+
     suspend fun delete(path: String, token: String? = null): AuthResult<String> =
         withContext(Dispatchers.IO) { request("DELETE", path, null, token) }
 

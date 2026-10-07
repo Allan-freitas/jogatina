@@ -32,6 +32,9 @@ import br.com.jogatina.ui.games.CatalogScreen
 import br.com.jogatina.ui.games.CatalogViewModel
 import br.com.jogatina.ui.games.LibraryScreen
 import br.com.jogatina.ui.games.LibraryViewModel
+import br.com.jogatina.data.notifications.NotificationsRepository
+import br.com.jogatina.ui.notifications.NotificationsScreen
+import br.com.jogatina.ui.notifications.NotificationsViewModel
 import br.com.jogatina.ui.theme.JogatinaTheme
 import br.com.jogatina.ui.welcome.WelcomeScreen
 import br.com.jogatina.ui.welcome.WelcomeViewModel
@@ -47,6 +50,9 @@ class MainActivity : ComponentActivity() {
     private val gamesRepository by lazy {
         GamesRepository(apiClient) { tokenStore.accessToken }
     }
+    private val notificationsRepository by lazy {
+        NotificationsRepository(apiClient) { tokenStore.accessToken }
+    }
     private val welcomeViewModel: WelcomeViewModel by viewModels {
         WelcomeViewModel.factory(authRepository, tokenStore)
     }
@@ -57,6 +63,11 @@ class MainActivity : ComponentActivity() {
     }
     private val libraryViewModel: LibraryViewModel by viewModels {
         LibraryViewModel.factory(gamesRepository) {
+            welcomeViewModel.logout()
+        }
+    }
+    private val notificationsViewModel: NotificationsViewModel by viewModels {
+        NotificationsViewModel.factory(notificationsRepository) {
             welcomeViewModel.logout()
         }
     }
@@ -80,6 +91,7 @@ class MainActivity : ComponentActivity() {
                         feedViewModel = feedViewModel,
                         libraryViewModel = libraryViewModel,
                         catalogViewModel = catalogViewModel,
+                        notificationsViewModel = notificationsViewModel,
                         onLogout = { welcomeViewModel.logout() }
                     )
                 } else {
@@ -96,10 +108,13 @@ fun JogatinaApp(
     feedViewModel: FeedViewModel? = null,
     libraryViewModel: LibraryViewModel? = null,
     catalogViewModel: CatalogViewModel? = null,
+    notificationsViewModel: NotificationsViewModel? = null,
     onLogout: () -> Unit = {}
 ) {
     var currentDestination by rememberSaveable { mutableStateOf(AppDestinations.HOME) }
     var showCatalog by rememberSaveable { mutableStateOf(false) }
+    var showNotifications by rememberSaveable { mutableStateOf(false) }
+    val notificationsState = notificationsViewModel?.state?.collectAsState()?.value
 
     NavigationSuiteScaffold(
         navigationSuiteItems = {
@@ -120,6 +135,16 @@ fun JogatinaApp(
     ) {
         Scaffold(modifier = Modifier.fillMaxSize()) { innerPadding ->
             when {
+                showNotifications && notificationsViewModel != null -> {
+                    NotificationsScreen(
+                        viewModel = notificationsViewModel,
+                        onBack = {
+                            showNotifications = false
+                            notificationsViewModel.refresh()
+                        },
+                        modifier = Modifier.padding(innerPadding)
+                    )
+                }
                 showCatalog && catalogViewModel != null -> {
                     CatalogScreen(
                         viewModel = catalogViewModel,
@@ -131,6 +156,8 @@ fun JogatinaApp(
                     FeedScreen(
                         viewModel = feedViewModel,
                         onLogout = onLogout,
+                        unreadCount = notificationsState?.unreadCount ?: 0,
+                        onNotificationsClick = { showNotifications = true },
                         modifier = Modifier.padding(innerPadding)
                     )
                 }

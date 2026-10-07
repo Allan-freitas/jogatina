@@ -38,6 +38,14 @@ Após o login o usuário cai no **Feed**, estilo newsfeed do Olympus
 - A API não tem update: 409 `AlreadyInLibrary` oferece **atualizar** e a
   troca de status/favorito é **DELETE + POST**.
 
+## Notificações
+
+- Sino com **badge de não-lidas** na TopAppBar do Feed → tela
+  **Notificações**: lista com ícone por tipo (`friend_request`,
+  `friend_accepted`, `new_message`), filtro Todas/Não lidas, tap marca como
+  lida (`PATCH notifications/{id}/read`), "ler todas"
+  (`POST notifications/read-all`), auto-refresh a cada 60 s na tela.
+
 ## Estrutura
 
 ```
@@ -55,6 +63,9 @@ app/src/main/java/br/com/jogatina/
 ├── data/games/
 │   ├── GameModels.kt          # GameDto, MyGameDto, GameStatus
 │   └── GamesRepository.kt     # games + users/me/games com Bearer
+├── data/notifications/
+│   ├── NotificationModels.kt  # NotificationDto
+│   └── NotificationsRepository.kt
 └── ui/
     ├── theme/                 # paleta navy + magenta (dynamicColor off)
     ├── welcome/
@@ -67,6 +78,9 @@ app/src/main/java/br/com/jogatina/
         ├── GamesScreens.kt    # biblioteca, catálogo, dialog de status
         ├── LibraryViewModel.kt
         └── CatalogViewModel.kt
+    └── notifications/
+        ├── NotificationsScreen.kt
+        └── NotificationsViewModel.kt
 ```
 
 ## API
@@ -89,6 +103,9 @@ Base de produção: `https://agfapp.com` (ver `AuthRepository.DEFAULT_BASE_URL`)
 | Minha biblioteca  | `GET /users/me/games` | jogos salvos (status, favorito, capa) |
 | Adicionar         | `POST /users/me/games` | `gameId`, `status` (Wishlist/Playing/Completed), `isFavorite` |
 | Remover           | `DELETE /users/me/games/{id}` | 204 (troca de status = DELETE + POST) |
+| Notificações      | `GET /notifications`  | `?onlyUnread=` → lista (pedidos, aceites, mensagens) |
+| Ler uma           | `PATCH /notifications/{id}/read` | marca como lida |
+| Ler todas         | `POST /notifications/read-all` | retorna a quantidade marcada |
 | Saúde             | `GET /health`         | status da API + banco |
 
 Erros vêm em `problem+json` (`Users.NotFoundByEmail`, validações, …) e são
@@ -117,6 +134,8 @@ Contratos espelham `CleanArchitecture.slnx`:
   `GetFeed.cs`, `ToggleLike.cs`, `AddComment.cs`, `GetComments.cs`,
   `DeletePost.cs` (+ `Domain/Posts`, `Application/Posts`, migration
   `Add_Feed`).
+- `src/Web.Api/Endpoints/Notifications/`: `Notifications.cs` (lista),
+  `MarkAsRead.cs`, `MarkAllAsRead.cs` (sem migration — sem mudança de modelo).
 - Imagens salvas em `wwwroot/uploads` (`IFileStorage`/`LocalFileStorage`,
   servidas via `UseStaticFiles`).
 - Capas dos jogos em `wwwroot/game-covers` (geradas como placeholder neon em
