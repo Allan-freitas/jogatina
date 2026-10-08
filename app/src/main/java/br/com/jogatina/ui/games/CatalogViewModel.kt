@@ -74,6 +74,10 @@ class CatalogViewModel(
         loadPage(s.page + 1, append = true)
     }
 
+    fun retry() {
+        loadPage(1)
+    }
+
     private fun loadPage(page: Int, append: Boolean = false) {
         val s = _state.value
         _state.value = s.copy(

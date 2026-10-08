@@ -136,6 +136,9 @@ fun LibraryScreen(
 
             if (state.error != null) {
                 Text(state.error!!, color = JogatinaDiscordRed, fontSize = 13.sp)
+                TextButton(onClick = { viewModel.refresh() }) {
+                    Text("Tentar de novo", color = JogatinaMagenta, fontSize = 13.sp)
+                }
                 Spacer(modifier = Modifier.height(4.dp))
             }
 
@@ -330,6 +333,9 @@ fun CatalogScreen(
 
             if (state.error != null) {
                 Text(state.error!!, color = JogatinaDiscordRed, fontSize = 13.sp)
+                TextButton(onClick = { viewModel.retry() }) {
+                    Text("Tentar de novo", color = JogatinaMagenta, fontSize = 13.sp)
+                }
                 Spacer(modifier = Modifier.height(4.dp))
             }
 

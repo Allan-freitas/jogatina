@@ -1,5 +1,6 @@
 package br.com.jogatina.data.api
 
+import android.util.Log
 import br.com.jogatina.data.auth.AuthResult
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -35,6 +36,7 @@ class ApiClient(val baseUrl: String) {
         mimeType: String,
         token: String? = null
     ): AuthResult<String> = withContext(Dispatchers.IO) {
+        val startedAt = System.currentTimeMillis()
         val boundary = "jogatina${System.currentTimeMillis()}"
         val url = URL("${baseUrl.trimEnd('/')}/$path")
         val conn = (url.openConnection() as HttpURLConnection).apply {
@@ -59,8 +61,9 @@ class ApiClient(val baseUrl: String) {
                 writer.append("\r\n--").append(boundary).append("--\r\n")
                 writer.flush()
             }
-            readResult(conn)
+            readResult(conn, "UPLOAD", path, startedAt)
         } catch (e: Exception) {
+            Log.e(TAG, "UPLOAD $path falhou: ${e.javaClass.simpleName}: ${e.message}")
             AuthResult.Error(e.message ?: "Falha de rede", null)
         } finally {
             conn.disconnect()
@@ -73,6 +76,7 @@ class ApiClient(val baseUrl: String) {
         body: ByteArray?,
         token: String?
     ): AuthResult<String> {
+        val startedAt = System.currentTimeMillis()
         val url = URL("${baseUrl.trimEnd('/')}/$path")
         val conn = (url.openConnection() as HttpURLConnection).apply {
             requestMethod = method
@@ -87,18 +91,20 @@ class ApiClient(val baseUrl: String) {
         }
         return try {
             if (body != null) conn.outputStream.use { it.write(body) }
-            readResult(conn)
+            readResult(conn, method, path, startedAt)
         } catch (e: Exception) {
+            Log.e(TAG, "$method $path falhou: ${e.javaClass.simpleName}: ${e.message}")
             AuthResult.Error(e.message ?: "Falha de rede", null)
         } finally {
             conn.disconnect()
         }
     }
 
-    private fun readResult(conn: HttpURLConnection): AuthResult<String> {
+    private fun readResult(conn: HttpURLConnection, method: String, path: String, startedAt: Long): AuthResult<String> {
         val code = conn.responseCode
         val stream = if (code in 200..299) conn.inputStream else conn.errorStream
         val raw = stream?.bufferedReader()?.use { it.readText() }.orEmpty()
+        Log.d(TAG, "$method $path -> $code (${System.currentTimeMillis() - startedAt}ms)")
         return if (code in 200..299) {
             AuthResult.Success(raw)
         } else {
@@ -114,5 +120,9 @@ class ApiClient(val baseUrl: String) {
         } catch (_: Exception) {
             raw
         }
+    }
+
+    companion object {
+        private const val TAG = "JogatinaApi"
     }
 }

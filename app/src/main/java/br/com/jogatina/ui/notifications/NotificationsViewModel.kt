@@ -15,7 +15,7 @@ import kotlinx.coroutines.launch
 
 data class NotificationsUiState(
     val notifications: List<NotificationDto> = emptyList(),
-    val loading: Boolean = true,
+    val loading: Boolean = false,
     val refreshing: Boolean = false,
     val error: String? = null,
     val onlyUnread: Boolean = false,

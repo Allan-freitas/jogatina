@@ -165,12 +165,20 @@ fun FeedScreen(
 
             if (state.error != null) {
                 item {
-                    Text(
-                        text = state.error!!,
-                        color = JogatinaDiscordRed,
-                        fontSize = 13.sp,
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
                         modifier = Modifier.padding(horizontal = 4.dp)
-                    )
+                    ) {
+                        Text(
+                            text = state.error!!,
+                            color = JogatinaDiscordRed,
+                            fontSize = 13.sp,
+                            modifier = Modifier.weight(1f)
+                        )
+                        TextButton(onClick = { viewModel.refresh() }) {
+                            Text("Tentar de novo", color = JogatinaMagenta, fontSize = 13.sp)
+                        }
+                    }
                 }
             }
 

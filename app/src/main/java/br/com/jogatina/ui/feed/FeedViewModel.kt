@@ -18,7 +18,7 @@ data class PickedImage(val bytes: ByteArray, val mimeType: String, val previewUr
 
 data class FeedUiState(
     val posts: List<PostDto> = emptyList(),
-    val loading: Boolean = true,
+    val loading: Boolean = false,
     val refreshing: Boolean = false,
     val error: String? = null,
     val composerText: String = "",

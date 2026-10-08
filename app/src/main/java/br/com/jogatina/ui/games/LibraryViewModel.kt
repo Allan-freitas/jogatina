@@ -14,7 +14,7 @@ import kotlinx.coroutines.launch
 
 data class LibraryUiState(
     val games: List<MyGameDto> = emptyList(),
-    val loading: Boolean = true,
+    val loading: Boolean = false,
     val refreshing: Boolean = false,
     val error: String? = null,
     val filter: GameStatus? = null,
