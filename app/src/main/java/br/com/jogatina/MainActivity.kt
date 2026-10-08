@@ -27,6 +27,7 @@ import br.com.jogatina.data.auth.TokenStore
 import br.com.jogatina.data.feed.FeedRepository
 import br.com.jogatina.ui.feed.FeedScreen
 import br.com.jogatina.ui.feed.FeedViewModel
+import br.com.jogatina.data.users.UserRepository
 import br.com.jogatina.data.games.GamesRepository
 import br.com.jogatina.ui.games.CatalogScreen
 import br.com.jogatina.ui.games.CatalogViewModel
@@ -47,6 +48,9 @@ class MainActivity : ComponentActivity() {
     private val feedRepository by lazy {
         FeedRepository(apiClient) { tokenStore.accessToken }
     }
+    private val userRepository by lazy {
+        UserRepository(apiClient) { tokenStore.accessToken }
+    }
     private val gamesRepository by lazy {
         GamesRepository(apiClient) { tokenStore.accessToken }
     }
@@ -57,7 +61,7 @@ class MainActivity : ComponentActivity() {
         WelcomeViewModel.factory(authRepository, tokenStore)
     }
     private val feedViewModel: FeedViewModel by viewModels {
-        FeedViewModel.factory(feedRepository, tokenStore) {
+        FeedViewModel.factory(feedRepository, userRepository, tokenStore) {
             welcomeViewModel.logout()
         }
     }

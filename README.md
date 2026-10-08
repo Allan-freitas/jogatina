@@ -15,7 +15,8 @@ que abrem o dialog de autenticação por e-mail/senha.
 
 ## Feed (pós-login)
 
-Após o login o usuário cai no **Feed**, estilo newsfeed do Olympus
+Após o login o usuário cai no **Feed**, com saudação **"Olá, {nome}"**
+(`GET users/me`) na TopAppBar, estilo newsfeed do Olympus
 (só posts de texto/imagem — sem Multimídia/Blog):
 
 - Composer no topo: texto + anexo de imagem da galeria (`POST feed/images`
@@ -107,6 +108,7 @@ Base de produção: `https://agfapp.com` (ver `AuthRepository.DEFAULT_BASE_URL`)
 | Ler uma           | `PATCH /notifications/{id}/read` | marca como lida |
 | Ler todas         | `POST /notifications/read-all` | retorna a quantidade marcada |
 | Saúde             | `GET /health`         | status da API + banco |
+| Meu perfil        | `GET /users/me`       | perfil do logado (nome do "Olá") |
 
 Erros vêm em `problem+json` (`Users.NotFoundByEmail`, validações, …) e são
 exibidos na própria tela. Para apontar dev/staging, passe outra `baseUrl` ao

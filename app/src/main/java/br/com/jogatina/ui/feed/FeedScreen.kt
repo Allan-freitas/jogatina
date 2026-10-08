@@ -55,6 +55,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -108,7 +109,14 @@ fun FeedScreen(
         modifier = modifier.fillMaxSize(),
         topBar = {
             TopAppBar(
-                title = { Text("Feed", fontWeight = FontWeight.Bold) },
+                title = {
+                    Text(
+                        text = state.profile?.let { "Olá, ${it.displayName}" } ?: "Olá",
+                        fontWeight = FontWeight.Bold,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                },
                 actions = {
                     IconButton(onClick = onNotificationsClick) {
                         BadgedBox(

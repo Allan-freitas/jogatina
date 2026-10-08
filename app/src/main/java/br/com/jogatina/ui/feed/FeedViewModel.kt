@@ -9,6 +9,8 @@ import br.com.jogatina.data.auth.TokenStore
 import br.com.jogatina.data.feed.CommentDto
 import br.com.jogatina.data.feed.FeedRepository
 import br.com.jogatina.data.feed.PostDto
+import br.com.jogatina.data.users.UserProfile
+import br.com.jogatina.data.users.UserRepository
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -18,6 +20,7 @@ data class PickedImage(val bytes: ByteArray, val mimeType: String, val previewUr
 
 data class FeedUiState(
     val posts: List<PostDto> = emptyList(),
+    val profile: UserProfile? = null,
     val loading: Boolean = false,
     val refreshing: Boolean = false,
     val error: String? = null,
@@ -37,6 +40,7 @@ data class FeedUiState(
 
 class FeedViewModel(
     private val feed: FeedRepository,
+    private val users: UserRepository,
     private val tokens: TokenStore,
     private val onAuthExpired: () -> Unit
 ) : ViewModel() {
@@ -46,6 +50,7 @@ class FeedViewModel(
 
     init {
         refresh(first = true)
+        loadProfile()
     }
 
     fun refresh(first: Boolean = false) {
@@ -73,6 +78,19 @@ class FeedViewModel(
 
     fun clearError() {
         _state.value = _state.value.copy(error = null)
+    }
+
+    fun loadProfile() {
+        viewModelScope.launch {
+            when (val r = users.getMyProfile()) {
+                is AuthResult.Success ->
+                    _state.value = _state.value.copy(profile = r.value)
+                is AuthResult.Error -> {
+                    // Nome é cosmético: 401 desloga, resto mantém fallback.
+                    if (r.statusCode == 401) onAuthExpired()
+                }
+            }
+        }
     }
 
     fun postImageUrl(relative: String?): String? = feed.imageUrl(relative)
@@ -235,13 +253,14 @@ class FeedViewModel(
     companion object {
         fun factory(
             feed: FeedRepository,
+            users: UserRepository,
             tokens: TokenStore,
             onAuthExpired: () -> Unit
         ): ViewModelProvider.Factory =
             object : ViewModelProvider.Factory {
                 @Suppress("UNCHECKED_CAST")
                 override fun <T : ViewModel> create(modelClass: Class<T>): T =
-                    FeedViewModel(feed, tokens, onAuthExpired) as T
+                    FeedViewModel(feed, users, tokens, onAuthExpired) as T
             }
     }
 }
