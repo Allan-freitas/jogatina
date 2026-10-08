@@ -23,9 +23,9 @@ Após o login o usuário cai no **Feed**, com saudação **"Olá, {nome}"**
   multipart → `POST feed/posts`).
 - Cards com autor, tempo relativo, imagem (Coil), contador de likes e de
   comentários, e lixeira nos próprios posts.
-- Like alternável (`POST feed/posts/{id}/likes`), comentários expansíveis
-  (`GET/POST feed/posts/{id}/comments`) e respostas em 1 nível
-  (`parentCommentId`).
+- **Reactions** estilo LinkedIn: toque no coração alterna "Amei" (❤️),
+  clique/pressão longa abre o picker (❤️ 🎉 😮 😂 💡); resumo com top-3 +
+  total (`POST feed/posts/{id}/likes { reaction? }`, omitir remove).
 - 401 (token expirado) desloga automaticamente para a welcome.
 
 ## Games (biblioteca + catálogo)
@@ -96,7 +96,7 @@ Base de produção: `https://agfapp.com` (ver `AuthRepository.DEFAULT_BASE_URL`)
 | Feed              | `GET /feed/posts`     | `?page=&pageSize=` → posts (autor, likes, `likedByMe`, comentários) |
 | Criar post        | `POST /feed/posts`    | `content?`, `imageUrl?` (relativo, ex. `/uploads/x.jpg`) → Id |
 | Upload de imagem  | `POST /feed/images`   | multipart `file` (JPEG/PNG/WebP/GIF ≤ 5 MB) → `{ imageUrl }` |
-| Curtir            | `POST /feed/posts/{id}/likes` | alterna → `{ liked, likeCount }` |
+| Curtir            | `POST /feed/posts/{id}/likes` | `{ reaction? }`: heart, celebrate, wow, haha, insightful (omitir remove) |
 | Comentários       | `GET /feed/posts/{id}/comments` | 1º nível + `replies` |
 | Comentar/responder| `POST /feed/posts/{id}/comments` | `content`, `parentCommentId?` → Id |
 | Apagar post       | `DELETE /feed/posts/{id}` | só o autor → Id |
@@ -133,9 +133,10 @@ Preview da welcome: `WelcomeScreen.kt` → `WelcomePreview` no Android Studio.
 Contratos espelham `CleanArchitecture.slnx`:
 - `src/Web.Api/Endpoints/Users/`: `Login.cs`, `Register.cs`, `SocialLogin.cs`.
 - `src/Web.Api/Endpoints/Feed/`: `CreatePost.cs`, `UploadImage.cs`,
-  `GetFeed.cs`, `ToggleLike.cs`, `AddComment.cs`, `GetComments.cs`,
-  `DeletePost.cs` (+ `Domain/Posts`, `Application/Posts`, migration
-  `Add_Feed`).
+  `GetFeed.cs` (`totalReactions`, `reactionCounts`, `myReaction`),
+  `ToggleLike.cs` (reactions), `AddComment.cs`, `GetComments.cs`,
+  `DeletePost.cs` (+ `Domain/Posts`, `Application/Posts`, migrations
+  `Add_Feed`, `Add_PostReactionKind`).
 - `src/Web.Api/Endpoints/Notifications/`: `Notifications.cs` (lista),
   `MarkAsRead.cs`, `MarkAllAsRead.cs` (sem migration — sem mudança de modelo).
 - Imagens salvas em `wwwroot/uploads` (`IFileStorage`/`LocalFileStorage`,

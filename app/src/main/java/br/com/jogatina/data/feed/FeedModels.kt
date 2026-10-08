@@ -20,9 +20,10 @@ data class PostDto(
     val content: String?,
     val imageUrl: String?,
     val createdOnUtc: String,
-    val likeCount: Int,
-    val commentCount: Int,
-    val likedByMe: Boolean
+    val totalReactions: Int,
+    val reactionCounts: Map<String, Int>,
+    val myReaction: String?,
+    val commentCount: Int
 )
 
 data class CommentDto(
@@ -35,3 +36,31 @@ data class CommentDto(
 )
 
 data class LikeResult(val liked: Boolean, val likeCount: Int)
+
+/** Reactions disponíveis (kinds aceitos pela API). */
+enum class Reaction(val kind: String, val emoji: String, val label: String) {
+    HEART("heart", "❤️", "Amei"),
+    CELEBRATE("celebrate", "🎉", "Parabéns"),
+    WOW("wow", "😮", "Uau"),
+    HAHA("haha", "😂", "Haha"),
+    INSIGHTFUL("insightful", "💡", "Ideia");
+
+    companion object {
+        fun fromKind(kind: String?): Reaction? =
+            entries.firstOrNull { it.kind.equals(kind, ignoreCase = true) }
+
+        /** Emojis dos top kinds para o resumo (ex.: ❤️😮 12). */
+        fun topEmojis(counts: Map<String, Int>, take: Int = 3): String =
+            counts.entries
+                .sortedByDescending { it.value }
+                .take(take)
+                .mapNotNull { fromKind(it.key)?.emoji }
+                .joinToString("")
+    }
+}
+
+data class ReactionResult(
+    val myReaction: String?,
+    val total: Int,
+    val counts: Map<String, Int>
+)

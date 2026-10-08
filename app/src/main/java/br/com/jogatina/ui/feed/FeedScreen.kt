@@ -4,6 +4,8 @@ import android.net.Uri
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -35,6 +37,7 @@ import androidx.compose.material3.BadgedBox
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -61,6 +64,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import br.com.jogatina.data.feed.CommentDto
 import br.com.jogatina.data.feed.PostDto
+import br.com.jogatina.data.feed.Reaction
 import br.com.jogatina.ui.theme.JogatinaDiscordRed
 import br.com.jogatina.ui.theme.JogatinaMagenta
 import br.com.jogatina.ui.theme.JogatinaNavyBottom
@@ -211,9 +215,13 @@ fun FeedScreen(
                     commentsLoading = state.commentsLoading.contains(post.id),
                     commentInput = state.commentInputs[post.id].orEmpty(),
                     replyTo = state.replyTo[post.id],
-                    liking = state.liking.contains(post.id),
+                    reacting = state.reacting.contains(post.id),
+                    pickerOpen = state.reactionPickerFor == post.id,
                     sendingComment = state.sendingComment.contains(post.id),
-                    onLike = { viewModel.toggleLike(post.id) },
+                    onQuickReact = { viewModel.quickReact(post.id) },
+                    onOpenPicker = { viewModel.openReactionPicker(post.id) },
+                    onClosePicker = viewModel::closeReactionPicker,
+                    onReact = { kind -> viewModel.react(post.id, kind) },
                     onToggleComments = { viewModel.toggleComments(post.id) },
                     onCommentInput = { viewModel.onCommentInput(post.id, it) },
                     onReplyTo = { viewModel.setReplyTo(post.id, it) },
@@ -321,9 +329,13 @@ private fun PostCard(
     commentsLoading: Boolean,
     commentInput: String,
     replyTo: CommentDto?,
-    liking: Boolean,
+    reacting: Boolean,
+    pickerOpen: Boolean,
     sendingComment: Boolean,
-    onLike: () -> Unit,
+    onQuickReact: () -> Unit,
+    onOpenPicker: () -> Unit,
+    onClosePicker: () -> Unit,
+    onReact: (String?) -> Unit,
     onToggleComments: () -> Unit,
     onCommentInput: (String) -> Unit,
     onReplyTo: (CommentDto?) -> Unit,
@@ -367,20 +379,84 @@ private fun PostCard(
             }
 
             Spacer(modifier = Modifier.height(4.dp))
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                IconButton(onClick = onLike, enabled = !liking, modifier = Modifier.size(40.dp)) {
-                    Icon(
-                        if (post.likedByMe) Icons.Filled.Favorite else Icons.Filled.FavoriteBorder,
-                        contentDescription = "Curtir",
-                        tint = if (post.likedByMe) JogatinaDiscordRed else JogatinaWhite70
-                    )
+            if (post.totalReactions > 0) {
+                Text(
+                    text = "${Reaction.topEmojis(post.reactionCounts)} ${post.totalReactions}",
+                    color = JogatinaWhite70,
+                    fontSize = 13.sp,
+                    modifier = Modifier
+                        .clickable(onClick = onOpenPicker)
+                        .padding(vertical = 2.dp)
+                )
+            }
+            Box {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    val myEmoji = Reaction.fromKind(post.myReaction)?.emoji
+                    Box(
+                        modifier = Modifier
+                            .size(40.dp)
+                            .combinedClickable(
+                                onClick = onOpenPicker,
+                                onLongClick = onOpenPicker
+                            ),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        if (reacting) {
+                            CircularProgressIndicator(color = JogatinaMagenta, strokeWidth = 2.dp, modifier = Modifier.size(18.dp))
+                        } else if (myEmoji != null) {
+                            Text(myEmoji, fontSize = 22.sp)
+                        } else {
+                            Icon(
+                                Icons.Filled.FavoriteBorder,
+                                contentDescription = "Reagir",
+                                tint = JogatinaWhite70
+                            )
+                        }
+                    }
+                    TextButton(onClick = onQuickReact, enabled = !reacting) {
+                        Text(
+                            if (post.myReaction == Reaction.HEART.kind) "Amei!" else "Amei",
+                            color = if (post.myReaction != null) JogatinaDiscordRed else JogatinaWhite70,
+                            fontSize = 13.sp,
+                            fontWeight = FontWeight.SemiBold
+                        )
+                    }
+                    Spacer(modifier = Modifier.width(4.dp))
+                    IconButton(onClick = onToggleComments, modifier = Modifier.size(40.dp)) {
+                        Icon(Icons.Filled.ChatBubbleOutline, contentDescription = "Comentários", tint = JogatinaWhite70)
+                    }
+                    Text("${post.commentCount}", color = JogatinaWhite70, fontSize = 13.sp)
                 }
-                Text("${post.likeCount}", color = JogatinaWhite70, fontSize = 13.sp)
-                Spacer(modifier = Modifier.width(12.dp))
-                IconButton(onClick = onToggleComments, modifier = Modifier.size(40.dp)) {
-                    Icon(Icons.Filled.ChatBubbleOutline, contentDescription = "Comentários", tint = JogatinaWhite70)
+                DropdownMenu(
+                    expanded = pickerOpen,
+                    onDismissRequest = onClosePicker,
+                    modifier = Modifier.background(JogatinaNavyMid)
+                ) {
+                    Row(
+                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
+                        horizontalArrangement = Arrangement.spacedBy(2.dp)
+                    ) {
+                        Reaction.entries.forEach { reaction ->
+                            val selected = post.myReaction == reaction.kind
+                            Column(
+                                horizontalAlignment = Alignment.CenterHorizontally,
+                                modifier = Modifier
+                                    .clip(RoundedCornerShape(12.dp))
+                                    .background(
+                                        if (selected) JogatinaMagenta.copy(alpha = 0.3f)
+                                        else Color.Transparent
+                                    )
+                                    .clickable {
+                                        onReact(if (selected) null else reaction.kind)
+                                    }
+                                    .padding(horizontal = 8.dp, vertical = 6.dp)
+                            ) {
+                                Text(reaction.emoji, fontSize = 26.sp)
+                                Text(reaction.label, color = JogatinaWhite70, fontSize = 10.sp)
+                            }
+                        }
+                    }
                 }
-                Text("${post.commentCount}", color = JogatinaWhite70, fontSize = 13.sp)
             }
 
             if (expanded) {
@@ -517,15 +593,18 @@ private fun PostCardPreview() {
                     id = "1", authorId = "a", authorName = "Mestre Lee",
                     content = "Bora de ranked hoje à noite?",
                     imageUrl = null, createdOnUtc = Instant.now().toString(),
-                    likeCount = 12, commentCount = 3, likedByMe = true
+                    totalReactions = 12,
+                    reactionCounts = mapOf("heart" to 8, "wow" to 3, "haha" to 1),
+                    myReaction = "heart", commentCount = 3
                 ),
                 isMine = true, imageUrl = null, expanded = true,
                 comments = listOf(
                     CommentDto("c1", "b", "Ana", "Eu vou!", Instant.now().toString(), emptyList())
                 ),
                 commentsLoading = false, commentInput = "", replyTo = null,
-                liking = false, sendingComment = false,
-                onLike = {}, onToggleComments = {}, onCommentInput = {},
+                reacting = false, pickerOpen = false, sendingComment = false,
+                onQuickReact = {}, onOpenPicker = {}, onClosePicker = {}, onReact = {},
+                onToggleComments = {}, onCommentInput = {},
                 onReplyTo = {}, onSendComment = {}, onDelete = {}
             )
         }

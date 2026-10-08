@@ -37,14 +37,23 @@ class FeedRepository(
         }
     }
 
-    suspend fun toggleLike(postId: String): AuthResult<LikeResult> =
-        api.postEmpty("feed/posts/$postId/likes", token()).map { raw ->
+    suspend fun setReaction(postId: String, kind: String?): AuthResult<ReactionResult> {
+        val body = JSONObject()
+        if (!kind.isNullOrBlank()) body.put("reaction", kind)
+        return api.post("feed/posts/$postId/likes", body, token()).map { raw ->
             val json = JSONObject(raw)
-            LikeResult(
-                liked = json.getBoolean("liked"),
-                likeCount = json.getInt("likeCount")
+            val countsJson = json.optJSONObject("counts")
+            val counts = mutableMapOf<String, Int>()
+            countsJson?.keys()?.forEach { key ->
+                counts[key] = countsJson.optInt(key)
+            }
+            ReactionResult(
+                myReaction = json.optString("myReaction").ifBlank { null },
+                total = json.optInt("totalReactions"),
+                counts = counts
             )
         }
+    }
 
     suspend fun getComments(postId: String): AuthResult<List<CommentDto>> =
         api.get("feed/posts/$postId/comments", token()).map { raw ->
@@ -70,9 +79,16 @@ class FeedRepository(
                 content = o.optString("content").ifBlank { null },
                 imageUrl = o.optString("imageUrl").ifBlank { null },
                 createdOnUtc = o.getString("createdOnUtc"),
-                likeCount = o.optInt("likeCount"),
-                commentCount = o.optInt("commentCount"),
-                likedByMe = o.optBoolean("likedByMe")
+                totalReactions = o.optInt("totalReactions"),
+                reactionCounts = o.optJSONObject("reactionCounts")?.let { countsJson ->
+                    buildMap {
+                        countsJson.keys().forEach { key ->
+                            put(key, countsJson.optInt(key))
+                        }
+                    }
+                }.orEmpty(),
+                myReaction = o.optString("myReaction").ifBlank { null },
+                commentCount = o.optInt("commentCount")
             )
         }
 

@@ -9,6 +9,7 @@ import br.com.jogatina.data.auth.TokenStore
 import br.com.jogatina.data.feed.CommentDto
 import br.com.jogatina.data.feed.FeedRepository
 import br.com.jogatina.data.feed.PostDto
+import br.com.jogatina.data.feed.Reaction
 import br.com.jogatina.data.users.UserProfile
 import br.com.jogatina.data.users.UserRepository
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -33,7 +34,8 @@ data class FeedUiState(
     val commentsLoading: Set<String> = emptySet(),
     val commentInputs: Map<String, String> = emptyMap(),
     val replyTo: Map<String, CommentDto?> = emptyMap(),
-    val liking: Set<String> = emptySet(),
+    val reacting: Set<String> = emptySet(),
+    val reactionPickerFor: String? = null,
     val sendingComment: Set<String> = emptySet(),
     val deleting: Set<String> = emptySet()
 )
@@ -141,21 +143,43 @@ class FeedViewModel(
         }
     }
 
-    fun toggleLike(postId: String) {
-        if (_state.value.liking.contains(postId)) return
-        _state.value = _state.value.copy(liking = _state.value.liking + postId)
+    fun openReactionPicker(postId: String) {
+        _state.value = _state.value.copy(reactionPickerFor = postId)
+    }
+
+    fun closeReactionPicker() {
+        _state.value = _state.value.copy(reactionPickerFor = null)
+    }
+
+    /** Toque rápido no coração: alterna Heart. Long-press abre o picker. */
+    fun quickReact(postId: String) {
+        val post = _state.value.posts.firstOrNull { it.id == postId } ?: return
+        react(postId, if (post.myReaction == Reaction.HEART.kind) null else Reaction.HEART.kind)
+    }
+
+    fun react(postId: String, kind: String?) {
+        if (_state.value.reacting.contains(postId)) return
+        _state.value = _state.value.copy(
+            reacting = _state.value.reacting + postId,
+            reactionPickerFor = null
+        )
         viewModelScope.launch {
-            when (val r = feed.toggleLike(postId)) {
+            when (val r = feed.setReaction(postId, kind)) {
                 is AuthResult.Success ->
                     _state.value = _state.value.copy(
                         posts = _state.value.posts.map { p ->
-                            if (p.id == postId) p.copy(likedByMe = r.value.liked, likeCount = r.value.likeCount)
-                            else p
+                            if (p.id == postId) {
+                                p.copy(
+                                    myReaction = r.value.myReaction,
+                                    totalReactions = r.value.total,
+                                    reactionCounts = r.value.counts
+                                )
+                            } else p
                         },
-                        liking = _state.value.liking - postId
+                        reacting = _state.value.reacting - postId
                     )
                 is AuthResult.Error -> {
-                    _state.value = _state.value.copy(liking = _state.value.liking - postId)
+                    _state.value = _state.value.copy(reacting = _state.value.reacting - postId)
                     handleError(r)
                 }
             }
