@@ -17,6 +17,7 @@ data class PostDto(
     val id: String,
     val authorId: String,
     val authorName: String,
+    val authorPhotoUrl: String?,
     val content: String?,
     val imageUrl: String?,
     val createdOnUtc: String,
@@ -30,6 +31,7 @@ data class CommentDto(
     val id: String,
     val authorId: String,
     val authorName: String,
+    val authorPhotoUrl: String?,
     val content: String,
     val createdOnUtc: String,
     val replies: List<CommentDto> = emptyList()

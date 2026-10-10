@@ -201,29 +201,45 @@ private fun InfoRow(icon: ImageVector, label: String, value: String) {
 }
 
 @Composable
-fun ProfileAvatar(photoUrl: String?, name: String, size: androidx.compose.ui.unit.Dp) {
-    if (photoUrl != null) {
-        AsyncImage(
-            model = photoUrl,
-            contentDescription = "Foto de perfil",
-            modifier = Modifier
-                .size(size)
-                .clip(CircleShape),
-            contentScale = ContentScale.Crop
-        )
-    } else {
-        Box(
-            modifier = Modifier
-                .size(size)
-                .background(JogatinaMagenta.copy(alpha = 0.25f), CircleShape),
-            contentAlignment = Alignment.Center
-        ) {
-            Text(
-                text = name.firstOrNull()?.uppercase() ?: "?",
-                color = JogatinaWhite,
-                fontWeight = FontWeight.Bold,
-                fontSize = 38.sp
+fun ProfileAvatar(
+    photoUrl: String?,
+    name: String,
+    size: androidx.compose.ui.unit.Dp,
+    showBorder: Boolean = true
+) {
+    Box(
+        modifier = Modifier
+            .size(size)
+            .background(
+                if (showBorder) JogatinaWhite else androidx.compose.ui.graphics.Color.Transparent,
+                CircleShape
             )
+            .padding(if (showBorder) 3.dp else 0.dp),
+        contentAlignment = Alignment.Center
+    ) {
+        if (photoUrl != null) {
+            AsyncImage(
+                model = photoUrl,
+                contentDescription = "Foto de perfil",
+                modifier = Modifier
+                    .fillMaxSize()
+                    .clip(CircleShape),
+                contentScale = ContentScale.Crop
+            )
+        } else {
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .background(JogatinaMagenta.copy(alpha = 0.25f), CircleShape),
+                contentAlignment = Alignment.Center
+            ) {
+                Text(
+                    text = name.firstOrNull()?.uppercase() ?: "?",
+                    color = JogatinaWhite,
+                    fontWeight = FontWeight.Bold,
+                    fontSize = (size.value / 3).sp
+                )
+            }
         }
     }
 }

@@ -76,6 +76,7 @@ class FeedRepository(
                 id = o.getString("id"),
                 authorId = o.getString("authorId"),
                 authorName = o.optString("authorName", "Jogador"),
+                authorPhotoUrl = o.optString("authorPhotoUrl").ifBlank { null },
                 content = o.optString("content").ifBlank { null },
                 imageUrl = o.optString("imageUrl").ifBlank { null },
                 createdOnUtc = o.getString("createdOnUtc"),
@@ -101,6 +102,7 @@ class FeedRepository(
             id = o.getString("id"),
             authorId = o.getString("authorId"),
             authorName = o.optString("authorName", "Jogador"),
+            authorPhotoUrl = o.optString("authorPhotoUrl").ifBlank { null },
             content = o.getString("content"),
             createdOnUtc = o.getString("createdOnUtc"),
             replies = if (replies != null) parseComments(replies) else emptyList()

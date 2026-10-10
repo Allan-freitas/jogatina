@@ -65,6 +65,7 @@ import androidx.compose.ui.unit.sp
 import br.com.jogatina.data.feed.CommentDto
 import br.com.jogatina.data.feed.PostDto
 import br.com.jogatina.data.feed.Reaction
+import br.com.jogatina.ui.profile.ProfileAvatar
 import br.com.jogatina.ui.theme.JogatinaDiscordRed
 import br.com.jogatina.ui.theme.JogatinaMagenta
 import br.com.jogatina.ui.theme.JogatinaNavyBottom
@@ -226,7 +227,8 @@ fun FeedScreen(
                     onCommentInput = { viewModel.onCommentInput(post.id, it) },
                     onReplyTo = { viewModel.setReplyTo(post.id, it) },
                     onSendComment = { viewModel.submitComment(post.id) },
-                    onDelete = { viewModel.deletePost(post.id) }
+                    onDelete = { viewModel.deletePost(post.id) },
+                    resolvePhoto = viewModel::postImageUrl
                 )
             }
 
@@ -340,7 +342,8 @@ private fun PostCard(
     onCommentInput: (String) -> Unit,
     onReplyTo: (CommentDto?) -> Unit,
     onSendComment: () -> Unit,
-    onDelete: () -> Unit
+    onDelete: () -> Unit,
+    resolvePhoto: (String?) -> String?
 ) {
     Card(
         colors = CardDefaults.cardColors(containerColor = JogatinaNavyMid),
@@ -348,7 +351,12 @@ private fun PostCard(
     ) {
         Column(modifier = Modifier.padding(12.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
-                Avatar(name = post.authorName, size = 40.dp)
+                ProfileAvatar(
+                    photoUrl = resolvePhoto(post.authorPhotoUrl),
+                    name = post.authorName,
+                    size = 40.dp,
+                    showBorder = false
+                )
                 Spacer(modifier = Modifier.width(10.dp))
                 Column(modifier = Modifier.weight(1f)) {
                     Text(post.authorName, color = JogatinaWhite, fontWeight = FontWeight.SemiBold, fontSize = 14.sp)
@@ -467,9 +475,18 @@ private fun PostCard(
                     }
                 }
                 comments.forEach { comment ->
-                    CommentRow(comment = comment, onReply = { onReplyTo(comment) })
+                    CommentRow(
+                        comment = comment,
+                        photoUrl = resolvePhoto(comment.authorPhotoUrl),
+                        onReply = { onReplyTo(comment) }
+                    )
                     comment.replies.forEach { reply ->
-                        CommentRow(comment = reply, indent = true, onReply = null)
+                        CommentRow(
+                            comment = reply,
+                            photoUrl = resolvePhoto(reply.authorPhotoUrl),
+                            indent = true,
+                            onReply = null
+                        )
                     }
                 }
                 if (replyTo != null) {
@@ -519,6 +536,7 @@ private fun PostCard(
 @Composable
 private fun CommentRow(
     comment: CommentDto,
+    photoUrl: String?,
     indent: Boolean = false,
     onReply: (() -> Unit)?
 ) {
@@ -527,7 +545,7 @@ private fun CommentRow(
             .fillMaxWidth()
             .padding(start = if (indent) 40.dp else 0.dp, top = 6.dp)
     ) {
-        Avatar(name = comment.authorName, size = 30.dp)
+        ProfileAvatar(photoUrl = photoUrl, name = comment.authorName, size = 30.dp, showBorder = false)
         Spacer(modifier = Modifier.width(8.dp))
         Column(
             modifier = Modifier
@@ -547,23 +565,6 @@ private fun CommentRow(
             Text(comment.content, color = JogatinaWhite, fontSize = 13.sp)
             Text(timeAgo(comment.createdOnUtc), color = JogatinaSubtitle, fontSize = 11.sp)
         }
-    }
-}
-
-@Composable
-private fun Avatar(name: String, size: androidx.compose.ui.unit.Dp) {
-    Box(
-        modifier = Modifier
-            .size(size)
-            .background(JogatinaMagenta.copy(alpha = 0.25f), CircleShape),
-        contentAlignment = Alignment.Center
-    ) {
-        Text(
-            text = name.firstOrNull()?.uppercase() ?: "?",
-            color = JogatinaWhite,
-            fontWeight = FontWeight.Bold,
-            fontSize = 14.sp
-        )
     }
 }
 
@@ -591,6 +592,7 @@ private fun PostCardPreview() {
             PostCard(
                 post = PostDto(
                     id = "1", authorId = "a", authorName = "Mestre Lee",
+                    authorPhotoUrl = null,
                     content = "Bora de ranked hoje à noite?",
                     imageUrl = null, createdOnUtc = Instant.now().toString(),
                     totalReactions = 12,
@@ -599,13 +601,14 @@ private fun PostCardPreview() {
                 ),
                 isMine = true, imageUrl = null, expanded = true,
                 comments = listOf(
-                    CommentDto("c1", "b", "Ana", "Eu vou!", Instant.now().toString(), emptyList())
+                    CommentDto("c1", "b", "Ana", null, "Eu vou!", Instant.now().toString(), emptyList())
                 ),
                 commentsLoading = false, commentInput = "", replyTo = null,
                 reacting = false, pickerOpen = false, sendingComment = false,
                 onQuickReact = {}, onOpenPicker = {}, onClosePicker = {}, onReact = {},
                 onToggleComments = {}, onCommentInput = {},
-                onReplyTo = {}, onSendComment = {}, onDelete = {}
+                onReplyTo = {}, onSendComment = {}, onDelete = {},
+                resolvePhoto = { it }
             )
         }
     }

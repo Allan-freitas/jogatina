@@ -21,7 +21,7 @@ Após o login o usuário cai no **Feed**, com saudação **"Olá, {nome}"**
 
 - Composer no topo: texto + anexo de imagem da galeria (`POST feed/images`
   multipart → `POST feed/posts`).
-- Cards com autor, tempo relativo, imagem (Coil), contador de likes e de
+- Cards com autor (**foto** + nome), tempo relativo, imagem (Coil), contador de likes e de
   comentários, e lixeira nos próprios posts.
 - **Reactions** estilo LinkedIn: toque no coração alterna "Amei" (❤️),
   clique/pressão longa abre o picker (❤️ 🎉 😮 😂 💡); resumo com top-3 +
@@ -51,8 +51,8 @@ Após o login o usuário cai no **Feed**, com saudação **"Olá, {nome}"**
 
 ## Perfil
 
-Aba **Profile**: avatar (foto via Coil ou inicial), nome, e-mail, data de
-nascimento e hobbies. Botão **Editar perfil**: troca de foto (galeria),
+Aba **Profile**: avatar circular com **borda branca** (foto via Coil ou
+inicial), nome, e-mail, data de nascimento e hobbies. Botão **Editar perfil**: troca de foto (galeria),
 seletor de data e campo de hobbies (`PUT users/me` + `POST users/me/photo`).
 
 ## Estrutura
