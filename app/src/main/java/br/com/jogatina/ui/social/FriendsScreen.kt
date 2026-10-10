@@ -49,6 +49,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -78,15 +79,15 @@ fun FriendsScreen(
         modifier = modifier.fillMaxSize(),
         topBar = {
             TopAppBar(
-                title = { Text("Amigos", fontWeight = FontWeight.Bold) },
+                title = { Text(stringResource(br.com.jogatina.R.string.friends_title), fontWeight = FontWeight.Bold) },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Voltar")
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(br.com.jogatina.R.string.back))
                     }
                 },
                 actions = {
                     IconButton(onClick = { viewModel.refresh() }) {
-                        Icon(Icons.Filled.Refresh, contentDescription = "Atualizar")
+                        Icon(Icons.Filled.Refresh, contentDescription = stringResource(br.com.jogatina.R.string.refresh_action))
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(
@@ -109,17 +110,17 @@ fun FriendsScreen(
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 FriendsTabChip(
                     selected = state.tab == FriendsTab.FRIENDS,
-                    label = "Meus amigos (${state.friends.size})",
+                    label = stringResource(br.com.jogatina.R.string.tab_friends, state.friends.size),
                     onClick = { viewModel.setTab(FriendsTab.FRIENDS) }
                 )
                 FriendsTabChip(
                     selected = state.tab == FriendsTab.REQUESTS,
-                    label = "Pedidos" + if (state.incomingCount > 0) " (${state.incomingCount})" else "",
+                    label = if (state.incomingCount > 0) stringResource(br.com.jogatina.R.string.tab_requests_unread, state.incomingCount) else stringResource(br.com.jogatina.R.string.tab_requests),
                     onClick = { viewModel.setTab(FriendsTab.REQUESTS) }
                 )
                 FriendsTabChip(
                     selected = state.tab == FriendsTab.SEARCH,
-                    label = "Buscar",
+                    label = stringResource(br.com.jogatina.R.string.tab_search),
                     onClick = { viewModel.setTab(FriendsTab.SEARCH) }
                 )
             }
@@ -189,7 +190,7 @@ private fun FriendsList(
     }
     if (friends.isEmpty()) {
         Text(
-            "Nenhum amigo ainda. Vá em Buscar para encontrar jogadores!",
+            stringResource(br.com.jogatina.R.string.friends_empty),
             color = JogatinaSubtitle, fontSize = 14.sp,
             modifier = Modifier.padding(24.dp)
         )
@@ -205,22 +206,22 @@ private fun FriendsList(
                     FriendAvatar(name = friend.fullName)
                     Spacer(modifier = Modifier.width(10.dp))
                     Column(modifier = Modifier.weight(1f)) {
-                        Text(friend.fullName.ifBlank { "Jogador" }, color = JogatinaWhite, fontWeight = FontWeight.SemiBold, fontSize = 14.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                        Text(friend.fullName.ifBlank { stringResource(br.com.jogatina.R.string.player) }, color = JogatinaWhite, fontWeight = FontWeight.SemiBold, fontSize = 14.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
                         Text(
-                            if (friend.isOnline) "Online" else "Offline",
+                            if (friend.isOnline) stringResource(br.com.jogatina.R.string.online) else stringResource(br.com.jogatina.R.string.offline),
                             color = if (friend.isOnline) Color(0xFF4CAF50) else JogatinaSubtitle,
                             fontSize = 12.sp
                         )
                     }
                     IconButton(onClick = { onChat(friend) }, modifier = Modifier.size(36.dp)) {
-                        Icon(Icons.AutoMirrored.Filled.Send, contentDescription = "Conversar", tint = JogatinaMagenta)
+                        Icon(Icons.AutoMirrored.Filled.Send, contentDescription = stringResource(br.com.jogatina.R.string.chat_with), tint = JogatinaMagenta)
                     }
                     IconButton(
                         onClick = { onRemove(friend) },
                         enabled = !busyIds.contains(friend.friendId),
                         modifier = Modifier.size(36.dp)
                     ) {
-                        Icon(Icons.Filled.DeleteOutline, contentDescription = "Remover", tint = JogatinaSubtitle)
+                        Icon(Icons.Filled.DeleteOutline, contentDescription = stringResource(br.com.jogatina.R.string.remove), tint = JogatinaSubtitle)
                     }
                 }
             }
@@ -244,7 +245,7 @@ private fun RequestsList(
     }
     if (requests.isEmpty()) {
         Text(
-            "Nenhum pedido pendente.",
+            stringResource(br.com.jogatina.R.string.requests_empty),
             color = JogatinaSubtitle, fontSize = 14.sp,
             modifier = Modifier.padding(24.dp)
         )
@@ -264,7 +265,7 @@ private fun RequestsList(
                         Column(modifier = Modifier.weight(1f)) {
                             Text(request.otherName, color = JogatinaWhite, fontWeight = FontWeight.SemiBold, fontSize = 14.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
                             Text(
-                                if (request.incoming) "Quer ser seu amigo" else "Aguardando resposta",
+                                if (request.incoming) stringResource(br.com.jogatina.R.string.incoming_text) else stringResource(br.com.jogatina.R.string.waiting_text),
                                 color = JogatinaSubtitle, fontSize = 12.sp
                             )
                         }
@@ -273,15 +274,15 @@ private fun RequestsList(
                                 CircularProgressIndicator(color = JogatinaWhite70, strokeWidth = 2.dp, modifier = Modifier.size(20.dp))
                             } else {
                                 IconButton(onClick = { onRespond(request, true) }, modifier = Modifier.size(38.dp)) {
-                                    Icon(Icons.Filled.Check, contentDescription = "Aceitar", tint = Color(0xFF4CAF50))
+                                    Icon(Icons.Filled.Check, contentDescription = stringResource(br.com.jogatina.R.string.accept), tint = Color(0xFF4CAF50))
                                 }
                                 IconButton(onClick = { onRespond(request, false) }, modifier = Modifier.size(38.dp)) {
-                                    Icon(Icons.Filled.Close, contentDescription = "Recusar", tint = JogatinaDiscordRed)
+                                    Icon(Icons.Filled.Close, contentDescription = stringResource(br.com.jogatina.R.string.decline), tint = JogatinaDiscordRed)
                                 }
                             }
                         } else {
                             Badge(containerColor = JogatinaWhite.copy(alpha = 0.15f), contentColor = JogatinaWhite70) {
-                                Text("Enviado", fontSize = 11.sp)
+                                Text(stringResource(br.com.jogatina.R.string.badge_sent), fontSize = 11.sp)
                             }
                         }
                     }
@@ -305,7 +306,7 @@ private fun SearchTab(
     OutlinedTextField(
         value = query,
         onValueChange = onQuery,
-        placeholder = { Text("Nome ou e-mail (mín. 2 letras)...", color = JogatinaWhite70, fontSize = 14.sp) },
+        placeholder = { Text(stringResource(br.com.jogatina.R.string.search_people_hint), color = JogatinaWhite70, fontSize = 14.sp) },
         leadingIcon = { Icon(Icons.Filled.Search, contentDescription = null, tint = JogatinaWhite70) },
         trailingIcon = {
             if (searching) {
@@ -342,13 +343,13 @@ private fun SearchTab(
                             containerColor = Color(0xFF4CAF50).copy(alpha = 0.2f),
                             contentColor = Color(0xFF4CAF50)
                         ) {
-                            Text("Amigos", fontSize = 11.sp, modifier = Modifier.padding(horizontal = 4.dp))
+                            Text(stringResource(br.com.jogatina.R.string.badge_friends), fontSize = 11.sp, modifier = Modifier.padding(horizontal = 4.dp))
                         }
                         Relation.SENT -> Badge(
                             containerColor = JogatinaWhite.copy(alpha = 0.15f),
                             contentColor = JogatinaWhite70
                         ) {
-                            Text("Enviado", fontSize = 11.sp, modifier = Modifier.padding(horizontal = 4.dp))
+                            Text(stringResource(br.com.jogatina.R.string.badge_sent), fontSize = 11.sp, modifier = Modifier.padding(horizontal = 4.dp))
                         }
                         Relation.NONE -> IconButton(
                             onClick = { onAdd(user.id) },
@@ -358,7 +359,7 @@ private fun SearchTab(
                             if (busy) {
                                 CircularProgressIndicator(color = JogatinaWhite70, strokeWidth = 2.dp, modifier = Modifier.size(18.dp))
                             } else {
-                                Icon(Icons.Filled.PersonAdd, contentDescription = "Adicionar", tint = JogatinaMagenta)
+                                Icon(Icons.Filled.PersonAdd, contentDescription = stringResource(br.com.jogatina.R.string.add), tint = JogatinaMagenta)
                             }
                         }
                     }

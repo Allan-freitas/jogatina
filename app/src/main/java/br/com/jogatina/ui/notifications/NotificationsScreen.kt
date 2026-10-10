@@ -46,6 +46,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
@@ -79,15 +80,15 @@ fun NotificationsScreen(
         modifier = modifier.fillMaxSize(),
         topBar = {
             TopAppBar(
-                title = { Text("Notificações", fontWeight = FontWeight.Bold) },
+                title = { Text(stringResource(br.com.jogatina.R.string.notif_title), fontWeight = FontWeight.Bold) },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Voltar")
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(br.com.jogatina.R.string.back))
                     }
                 },
                 actions = {
                     IconButton(onClick = { viewModel.refresh() }) {
-                        Icon(Icons.Filled.Refresh, contentDescription = "Atualizar")
+                        Icon(Icons.Filled.Refresh, contentDescription = stringResource(br.com.jogatina.R.string.refresh_action))
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(
@@ -114,13 +115,13 @@ fun NotificationsScreen(
                 FilterChip(
                     selected = !state.onlyUnread,
                     onClick = { viewModel.setOnlyUnread(false) },
-                    label = { Text("Todas", fontSize = 13.sp) },
+                    label = { Text(stringResource(br.com.jogatina.R.string.tab_all), fontSize = 13.sp) },
                     colors = notificationChipColors()
                 )
                 FilterChip(
                     selected = state.onlyUnread,
                     onClick = { viewModel.setOnlyUnread(true) },
-                    label = { Text("Não lidas (${state.unreadCount})", fontSize = 13.sp) },
+                    label = { Text(stringResource(br.com.jogatina.R.string.tab_unread, state.unreadCount), fontSize = 13.sp) },
                     colors = notificationChipColors()
                 )
                 Spacer(modifier = Modifier.weight(1f))
@@ -133,7 +134,7 @@ fun NotificationsScreen(
                     } else {
                         Icon(Icons.Filled.DoneAll, contentDescription = null, tint = JogatinaMagenta, modifier = Modifier.size(18.dp))
                         Spacer(modifier = Modifier.width(4.dp))
-                        Text("Ler todas", color = JogatinaMagenta, fontSize = 13.sp)
+                        Text(stringResource(br.com.jogatina.R.string.mark_all_read), color = JogatinaMagenta, fontSize = 13.sp)
                     }
                 }
             }
@@ -142,7 +143,7 @@ fun NotificationsScreen(
             if (state.error != null) {
                 Text(state.error!!, color = JogatinaDiscordRed, fontSize = 13.sp)
                 TextButton(onClick = { viewModel.refresh() }) {
-                    Text("Tentar de novo", color = JogatinaMagenta, fontSize = 13.sp)
+                    Text(stringResource(br.com.jogatina.R.string.retry), color = JogatinaMagenta, fontSize = 13.sp)
                 }
                 Spacer(modifier = Modifier.height(4.dp))
             }
@@ -153,7 +154,7 @@ fun NotificationsScreen(
                 }
             } else if (state.visible.isEmpty()) {
                 Text(
-                    if (state.onlyUnread) "Nada por aqui. Você está em dia!" else "Nenhuma notificação ainda.",
+                    if (state.onlyUnread) stringResource(br.com.jogatina.R.string.empty_unread) else stringResource(br.com.jogatina.R.string.empty_notif),
                     color = JogatinaSubtitle, fontSize = 14.sp,
                     modifier = Modifier.padding(24.dp)
                 )
@@ -237,11 +238,12 @@ private fun typeIcon(type: String): ImageVector = when (type) {
     else -> Icons.Filled.Notifications
 }
 
+@Composable
 private fun typeLabel(type: String): String = when (type) {
-    "friend_request" -> "Pedido de amizade"
-    "friend_accepted" -> "Amizade aceita"
-    "new_message" -> "Nova mensagem"
-    else -> "Notificação"
+    "friend_request" -> stringResource(br.com.jogatina.R.string.notif_friend_request)
+    "friend_accepted" -> stringResource(br.com.jogatina.R.string.notif_friend_accepted)
+    "new_message" -> stringResource(br.com.jogatina.R.string.notif_new_message)
+    else -> stringResource(br.com.jogatina.R.string.notif_generic)
 }
 
 @Preview(showBackground = true)

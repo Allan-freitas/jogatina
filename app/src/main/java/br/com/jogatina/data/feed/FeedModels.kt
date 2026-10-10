@@ -40,12 +40,12 @@ data class CommentDto(
 data class LikeResult(val liked: Boolean, val likeCount: Int)
 
 /** Reactions disponíveis (kinds aceitos pela API). */
-enum class Reaction(val kind: String, val emoji: String, val label: String) {
-    HEART("heart", "❤️", "Amei"),
-    CELEBRATE("celebrate", "🎉", "Parabéns"),
-    WOW("wow", "😮", "Uau"),
-    HAHA("haha", "😂", "Haha"),
-    INSIGHTFUL("insightful", "💡", "Ideia");
+enum class Reaction(val kind: String, val emoji: String, val labelRes: Int) {
+    HEART("heart", "❤️", br.com.jogatina.R.string.reaction_heart),
+    CELEBRATE("celebrate", "🎉", br.com.jogatina.R.string.reaction_celebrate),
+    WOW("wow", "😮", br.com.jogatina.R.string.reaction_wow),
+    HAHA("haha", "😂", br.com.jogatina.R.string.reaction_haha),
+    INSIGHTFUL("insightful", "💡", br.com.jogatina.R.string.reaction_insightful);
 
     companion object {
         fun fromKind(kind: String?): Reaction? =

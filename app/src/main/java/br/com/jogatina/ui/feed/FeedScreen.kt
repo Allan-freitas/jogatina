@@ -57,6 +57,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
@@ -118,7 +119,8 @@ fun FeedScreen(
             TopAppBar(
                 title = {
                     Text(
-                        text = state.profile?.let { "Olá, ${it.displayName}" } ?: "Olá",
+                        text = state.profile?.let { stringResource(br.com.jogatina.R.string.greeting, it.displayName) }
+                            ?: stringResource(br.com.jogatina.R.string.greeting_fallback),
                         fontWeight = FontWeight.Bold,
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis
@@ -138,7 +140,7 @@ fun FeedScreen(
                                 }
                             }
                         ) {
-                            Icon(Icons.Filled.ChatBubbleOutline, contentDescription = "Conversas")
+                            Icon(Icons.Filled.ChatBubbleOutline, contentDescription = stringResource(br.com.jogatina.R.string.conversations))
                         }
                     }
                     IconButton(onClick = onNotificationsClick) {
@@ -154,14 +156,14 @@ fun FeedScreen(
                                 }
                             }
                         ) {
-                            Icon(Icons.Filled.Notifications, contentDescription = "Notificações")
+                            Icon(Icons.Filled.Notifications, contentDescription = stringResource(br.com.jogatina.R.string.notifications))
                         }
                     }
                     IconButton(onClick = { viewModel.refresh() }) {
-                        Icon(Icons.Filled.Refresh, contentDescription = "Atualizar")
+                        Icon(Icons.Filled.Refresh, contentDescription = stringResource(br.com.jogatina.R.string.refresh_action))
                     }
                     IconButton(onClick = onLogout) {
-                        Icon(Icons.AutoMirrored.Filled.ExitToApp, contentDescription = "Sair")
+                        Icon(Icons.AutoMirrored.Filled.ExitToApp, contentDescription = stringResource(br.com.jogatina.R.string.logout))
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(
@@ -207,7 +209,7 @@ fun FeedScreen(
                             modifier = Modifier.weight(1f)
                         )
                         TextButton(onClick = { viewModel.refresh() }) {
-                            Text("Tentar de novo", color = JogatinaMagenta, fontSize = 13.sp)
+                            Text(stringResource(br.com.jogatina.R.string.retry), color = JogatinaMagenta, fontSize = 13.sp)
                         }
                     }
                 }
@@ -253,7 +255,7 @@ fun FeedScreen(
             if (!state.loading && state.posts.isEmpty()) {
                 item {
                     Text(
-                        text = "Nenhum post ainda. Seja o primeiro a publicar!",
+                        text = stringResource(br.com.jogatina.R.string.empty_feed),
                         color = JogatinaSubtitle,
                         fontSize = 14.sp,
                         modifier = Modifier.padding(24.dp)
@@ -284,7 +286,7 @@ private fun ComposerCard(
             OutlinedTextField(
                 value = text,
                 onValueChange = onTextChange,
-                placeholder = { Text("No que você está pensando?", color = JogatinaWhite70, fontSize = 14.sp) },
+                placeholder = { Text(stringResource(br.com.jogatina.R.string.composer_hint), color = JogatinaWhite70, fontSize = 14.sp) },
                 modifier = Modifier.fillMaxWidth(),
                 maxLines = 5,
                 colors = OutlinedTextFieldDefaults.colors(
@@ -299,7 +301,7 @@ private fun ComposerCard(
                 Box {
                     AsyncImage(
                         model = pickedUri,
-                        contentDescription = "Imagem anexada",
+                        contentDescription = stringResource(br.com.jogatina.R.string.attached_image),
                         modifier = Modifier
                             .fillMaxWidth()
                             .height(180.dp)
@@ -314,7 +316,7 @@ private fun ComposerCard(
                             .background(Color.Black.copy(alpha = 0.6f), CircleShape)
                             .size(32.dp)
                     ) {
-                        Icon(Icons.Filled.Close, contentDescription = "Remover", tint = JogatinaWhite)
+                        Icon(Icons.Filled.Close, contentDescription = stringResource(br.com.jogatina.R.string.remove_image), tint = JogatinaWhite)
                     }
                 }
                 Spacer(modifier = Modifier.height(8.dp))
@@ -325,13 +327,13 @@ private fun ComposerCard(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 IconButton(onClick = onAttach) {
-                    Icon(Icons.Filled.Image, contentDescription = "Anexar imagem", tint = JogatinaMagenta)
+                    Icon(Icons.Filled.Image, contentDescription = stringResource(br.com.jogatina.R.string.attach_image), tint = JogatinaMagenta)
                 }
                 TextButton(onClick = onPublish, enabled = !publishing) {
                     if (publishing) {
                         CircularProgressIndicator(color = JogatinaWhite, strokeWidth = 2.dp, modifier = Modifier.size(18.dp))
                     } else {
-                        Text("Publicar", color = JogatinaWhite, fontWeight = FontWeight.SemiBold, fontSize = 15.sp)
+                        Text(stringResource(br.com.jogatina.R.string.publish), color = JogatinaWhite, fontWeight = FontWeight.SemiBold, fontSize = 15.sp)
                     }
                 }
             }
@@ -381,7 +383,7 @@ private fun PostCard(
                 }
                 if (isMine) {
                     IconButton(onClick = onDelete, modifier = Modifier.size(36.dp)) {
-                        Icon(Icons.Filled.DeleteOutline, contentDescription = "Apagar", tint = JogatinaSubtitle)
+                        Icon(Icons.Filled.DeleteOutline, contentDescription = stringResource(br.com.jogatina.R.string.delete), tint = JogatinaSubtitle)
                     }
                 }
             }
@@ -395,7 +397,7 @@ private fun PostCard(
                 Spacer(modifier = Modifier.height(8.dp))
                 AsyncImage(
                     model = imageUrl,
-                    contentDescription = "Imagem do post",
+                    contentDescription = stringResource(br.com.jogatina.R.string.post_image),
                     modifier = Modifier
                         .fillMaxWidth()
                         .clip(RoundedCornerShape(12.dp)),
@@ -433,14 +435,14 @@ private fun PostCard(
                         } else {
                             Icon(
                                 Icons.Filled.FavoriteBorder,
-                                contentDescription = "Reagir",
+                                contentDescription = stringResource(br.com.jogatina.R.string.react),
                                 tint = JogatinaWhite70
                             )
                         }
                     }
                     TextButton(onClick = onQuickReact, enabled = !reacting) {
                         Text(
-                            if (post.myReaction == Reaction.HEART.kind) "Amei!" else "Amei",
+                            if (post.myReaction == Reaction.HEART.kind) stringResource(br.com.jogatina.R.string.loved) else stringResource(br.com.jogatina.R.string.love),
                             color = if (post.myReaction != null) JogatinaDiscordRed else JogatinaWhite70,
                             fontSize = 13.sp,
                             fontWeight = FontWeight.SemiBold
@@ -448,7 +450,7 @@ private fun PostCard(
                     }
                     Spacer(modifier = Modifier.width(4.dp))
                     IconButton(onClick = onToggleComments, modifier = Modifier.size(40.dp)) {
-                        Icon(Icons.Filled.ChatBubbleOutline, contentDescription = "Comentários", tint = JogatinaWhite70)
+                        Icon(Icons.Filled.ChatBubbleOutline, contentDescription = stringResource(br.com.jogatina.R.string.comments), tint = JogatinaWhite70)
                     }
                     Text("${post.commentCount}", color = JogatinaWhite70, fontSize = 13.sp)
                 }
@@ -477,7 +479,7 @@ private fun PostCard(
                                     .padding(horizontal = 8.dp, vertical = 6.dp)
                             ) {
                                 Text(reaction.emoji, fontSize = 26.sp)
-                                Text(reaction.label, color = JogatinaWhite70, fontSize = 10.sp)
+                                Text(stringResource(reaction.labelRes), color = JogatinaWhite70, fontSize = 10.sp)
                             }
                         }
                     }
@@ -512,13 +514,13 @@ private fun PostCard(
                         modifier = Modifier.padding(top = 4.dp)
                     ) {
                         Text(
-                            "Respondendo a ${replyTo.authorName}",
+                            stringResource(br.com.jogatina.R.string.replying_to, replyTo.authorName),
                             color = JogatinaMagenta,
                             fontSize = 12.sp,
                             modifier = Modifier.weight(1f)
                         )
                         IconButton(onClick = { onReplyTo(null) }, modifier = Modifier.size(28.dp)) {
-                            Icon(Icons.Filled.Close, contentDescription = "Cancelar resposta", tint = JogatinaSubtitle)
+                            Icon(Icons.Filled.Close, contentDescription = stringResource(br.com.jogatina.R.string.cancel_reply), tint = JogatinaSubtitle)
                         }
                     }
                 }
@@ -526,7 +528,7 @@ private fun PostCard(
                     OutlinedTextField(
                         value = commentInput,
                         onValueChange = onCommentInput,
-                        placeholder = { Text("Comentar...", color = JogatinaWhite70, fontSize = 13.sp) },
+                        placeholder = { Text(stringResource(br.com.jogatina.R.string.comment_hint), color = JogatinaWhite70, fontSize = 13.sp) },
                         modifier = Modifier.weight(1f),
                         singleLine = true,
                         shape = RoundedCornerShape(24.dp),
@@ -542,7 +544,7 @@ private fun PostCard(
                         if (sendingComment) {
                             CircularProgressIndicator(color = JogatinaWhite, strokeWidth = 2.dp, modifier = Modifier.size(18.dp))
                         } else {
-                            Icon(Icons.AutoMirrored.Filled.Send, contentDescription = "Enviar", tint = JogatinaMagenta)
+                            Icon(Icons.AutoMirrored.Filled.Send, contentDescription = stringResource(br.com.jogatina.R.string.send), tint = JogatinaMagenta)
                         }
                     }
                 }
@@ -576,7 +578,7 @@ private fun CommentRow(
                 Text(comment.authorName, color = JogatinaWhite, fontWeight = FontWeight.SemiBold, fontSize = 12.sp, modifier = Modifier.weight(1f))
                 if (onReply != null) {
                     TextButton(onClick = onReply) {
-                        Text("Responder", color = JogatinaMagenta, fontSize = 12.sp)
+                        Text(stringResource(br.com.jogatina.R.string.reply), color = JogatinaMagenta, fontSize = 12.sp)
                     }
                 }
             }
@@ -586,19 +588,20 @@ private fun CommentRow(
     }
 }
 
+@Composable
 fun timeAgo(iso: String): String {
-    return try {
-        val then = Instant.parse(iso)
-        val minutes = Duration.between(then, Instant.now()).toMinutes()
-        when {
-            minutes < 1 -> "agora"
-            minutes < 60 -> "há ${minutes}min"
-            minutes < 60 * 24 -> "há ${minutes / 60}h"
-            minutes < 60 * 24 * 7 -> "há ${minutes / (60 * 24)}d"
-            else -> iso.substring(0, 10).split("-").reversed().joinToString("/")
-        }
+    val minutes: Long? = try {
+        Duration.between(Instant.parse(iso), Instant.now()).toMinutes()
     } catch (_: Exception) {
-        ""
+        null
+    }
+    if (minutes == null) return ""
+    return when {
+        minutes < 1 -> stringResource(br.com.jogatina.R.string.time_now)
+        minutes < 60 -> stringResource(br.com.jogatina.R.string.time_min, minutes.toInt())
+        minutes < 60 * 24 -> stringResource(br.com.jogatina.R.string.time_hour, (minutes / 60).toInt())
+        minutes < 60 * 24 * 7 -> stringResource(br.com.jogatina.R.string.time_day, (minutes / (60 * 24)).toInt())
+        else -> iso.substring(0, 10).split("-").reversed().joinToString("/")
     }
 }
 

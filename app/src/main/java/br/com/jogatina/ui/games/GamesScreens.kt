@@ -65,6 +65,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
@@ -126,13 +127,13 @@ fun LibraryScreen(
         modifier = modifier.fillMaxSize(),
         topBar = {
             TopAppBar(
-                title = { Text("Meus Jogos", fontWeight = FontWeight.Bold) },
+                title = { Text(stringResource(br.com.jogatina.R.string.library_title), fontWeight = FontWeight.Bold) },
                 actions = {
                     IconButton(onClick = onSearchCatalog) {
-                        Icon(Icons.Filled.Search, contentDescription = "Buscar no catálogo")
+                        Icon(Icons.Filled.Search, contentDescription = stringResource(br.com.jogatina.R.string.search_catalog))
                     }
                     IconButton(onClick = { viewModel.refresh() }) {
-                        Icon(Icons.Filled.Refresh, contentDescription = "Atualizar")
+                        Icon(Icons.Filled.Refresh, contentDescription = stringResource(br.com.jogatina.R.string.refresh_action))
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(
@@ -152,11 +153,11 @@ fun LibraryScreen(
         ) {
             Spacer(modifier = Modifier.height(8.dp))
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                StatusFilterChip(selected = state.filter == null, label = "Todos", onClick = { viewModel.setFilter(null) })
+                StatusFilterChip(selected = state.filter == null, label = stringResource(br.com.jogatina.R.string.filter_all), onClick = { viewModel.setFilter(null) })
                 GameStatus.entries.forEach { status ->
                     StatusFilterChip(
                         selected = state.filter == status,
-                        label = status.label,
+                        label = stringResource(status.labelRes),
                         onClick = { viewModel.setFilter(status) }
                     )
                 }
@@ -166,7 +167,7 @@ fun LibraryScreen(
             if (state.error != null) {
                 Text(state.error!!, color = JogatinaDiscordRed, fontSize = 13.sp)
                 TextButton(onClick = { viewModel.refresh() }) {
-                    Text("Tentar de novo", color = JogatinaMagenta, fontSize = 13.sp)
+                    Text(stringResource(br.com.jogatina.R.string.retry), color = JogatinaMagenta, fontSize = 13.sp)
                 }
                 Spacer(modifier = Modifier.height(4.dp))
             }
@@ -177,7 +178,7 @@ fun LibraryScreen(
                 }
             } else if (state.visible.isEmpty()) {
                 Text(
-                    "Nenhum jogo aqui. Toque na lupa para buscar no catálogo!",
+                    stringResource(br.com.jogatina.R.string.library_empty),
                     color = JogatinaSubtitle, fontSize = 14.sp,
                     modifier = Modifier.padding(24.dp)
                 )
@@ -263,7 +264,7 @@ private fun LibraryRow(
                 IconButton(onClick = onToggleFavorite, enabled = !busy, modifier = Modifier.size(36.dp)) {
                     Icon(
                         if (game.isFavorite) Icons.Filled.Star else Icons.Filled.StarBorder,
-                        contentDescription = "Favorito",
+                        contentDescription = stringResource(br.com.jogatina.R.string.favorite),
                         tint = if (game.isFavorite) JogatinaGold else JogatinaWhite70
                     )
                 }
@@ -271,7 +272,7 @@ private fun LibraryRow(
                     if (busy) {
                         CircularProgressIndicator(color = JogatinaWhite70, strokeWidth = 2.dp, modifier = Modifier.size(16.dp))
                     } else {
-                        Icon(Icons.Filled.DeleteOutline, contentDescription = "Remover", tint = JogatinaSubtitle)
+                        Icon(Icons.Filled.DeleteOutline, contentDescription = stringResource(br.com.jogatina.R.string.remove), tint = JogatinaSubtitle)
                     }
                 }
             }
@@ -292,7 +293,7 @@ private fun StatusChip(status: GameStatus) {
             .background(color.copy(alpha = 0.2f))
             .padding(horizontal = 8.dp, vertical = 3.dp)
     ) {
-        Text(status.label, color = color, fontSize = 11.sp, fontWeight = FontWeight.SemiBold)
+        Text(stringResource(status.labelRes), color = color, fontSize = 11.sp, fontWeight = FontWeight.SemiBold)
     }
 }
 
@@ -313,10 +314,10 @@ fun CatalogScreen(
         modifier = modifier.fillMaxSize(),
         topBar = {
             TopAppBar(
-                title = { Text("Catálogo", fontWeight = FontWeight.Bold) },
+                title = { Text(stringResource(br.com.jogatina.R.string.catalog_title), fontWeight = FontWeight.Bold) },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Voltar")
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(br.com.jogatina.R.string.back))
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(
@@ -338,7 +339,7 @@ fun CatalogScreen(
             OutlinedTextField(
                 value = state.query,
                 onValueChange = viewModel::onQueryChange,
-                placeholder = { Text("Buscar jogo...", color = JogatinaWhite70, fontSize = 14.sp) },
+                placeholder = { Text(stringResource(br.com.jogatina.R.string.search_games_hint), color = JogatinaWhite70, fontSize = 14.sp) },
                 leadingIcon = { Icon(Icons.Filled.Search, contentDescription = null, tint = JogatinaWhite70) },
                 singleLine = true,
                 modifier = Modifier.fillMaxWidth(),
@@ -349,7 +350,7 @@ fun CatalogScreen(
                 OutlinedTextField(
                     value = state.genre,
                     onValueChange = { viewModel.onFilterChange(it, state.platform) },
-                    placeholder = { Text("Gênero", color = JogatinaWhite70, fontSize = 13.sp) },
+                    placeholder = { Text(stringResource(br.com.jogatina.R.string.genre_hint), color = JogatinaWhite70, fontSize = 13.sp) },
                     singleLine = true,
                     modifier = Modifier.weight(1f),
                     colors = gameFieldColors()
@@ -357,7 +358,7 @@ fun CatalogScreen(
                 OutlinedTextField(
                     value = state.platform,
                     onValueChange = { viewModel.onFilterChange(state.genre, it) },
-                    placeholder = { Text("Plataforma", color = JogatinaWhite70, fontSize = 13.sp) },
+                    placeholder = { Text(stringResource(br.com.jogatina.R.string.platform_hint), color = JogatinaWhite70, fontSize = 13.sp) },
                     singleLine = true,
                     modifier = Modifier.weight(1f),
                     colors = gameFieldColors()
@@ -368,7 +369,7 @@ fun CatalogScreen(
             if (state.error != null) {
                 Text(state.error!!, color = JogatinaDiscordRed, fontSize = 13.sp)
                 TextButton(onClick = { viewModel.retry() }) {
-                    Text("Tentar de novo", color = JogatinaMagenta, fontSize = 13.sp)
+                    Text(stringResource(br.com.jogatina.R.string.retry), color = JogatinaMagenta, fontSize = 13.sp)
                 }
                 Spacer(modifier = Modifier.height(4.dp))
             }
@@ -399,7 +400,7 @@ fun CatalogScreen(
                                 if (state.loadingMore) {
                                     CircularProgressIndicator(color = JogatinaWhite, strokeWidth = 2.dp, modifier = Modifier.size(18.dp))
                                 } else {
-                                    Text("Carregar mais", color = JogatinaMagenta, fontSize = 14.sp)
+                                    Text(stringResource(br.com.jogatina.R.string.load_more), color = JogatinaMagenta, fontSize = 14.sp)
                                 }
                             }
                         }
@@ -416,7 +417,7 @@ fun CatalogScreen(
             initialStatus = GameStatus.WISHLIST,
             initialFavorite = pendingFav,
             isUpdate = conflicted,
-            conflictMessage = if (conflicted) "Já está na sua biblioteca." else null,
+            conflictMessage = if (conflicted) stringResource(br.com.jogatina.R.string.conflict_msg) else null,
             onConfirm = { status, fav ->
                 if (conflicted) viewModel.confirmUpdate(game, status, fav)
                 else viewModel.add(game, status, fav)
@@ -462,7 +463,7 @@ private fun CatalogCard(
                     ) {
                         Icon(Icons.Filled.Check, contentDescription = null, tint = Color(0xFF4CAF50), modifier = Modifier.size(14.dp))
                         Spacer(modifier = Modifier.width(4.dp))
-                        Text("Na biblioteca", color = JogatinaWhite, fontSize = 11.sp)
+                        Text(stringResource(br.com.jogatina.R.string.in_library), color = JogatinaWhite, fontSize = 11.sp)
                     }
                 }
             }
@@ -487,7 +488,7 @@ private fun CatalogCard(
                     } else {
                         Icon(Icons.Filled.Add, contentDescription = null, modifier = Modifier.size(18.dp))
                         Spacer(modifier = Modifier.width(4.dp))
-                        Text(if (inLibrary) "Adicionado" else "Adicionar", fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
+                        Text(if (inLibrary) stringResource(br.com.jogatina.R.string.added) else stringResource(br.com.jogatina.R.string.add), fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
                     }
                 }
             }
@@ -554,14 +555,14 @@ private fun AddToLibraryDialog(
             }
             if (onPickCover != null) {
                 Spacer(modifier = Modifier.height(12.dp))
-                Text("Capa do jogo (vale para o catálogo)", color = JogatinaWhite70, fontSize = 12.sp)
+                Text(stringResource(br.com.jogatina.R.string.cover_section), color = JogatinaWhite70, fontSize = 12.sp)
                 Spacer(modifier = Modifier.height(6.dp))
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     val preview = pickedCoverUri?.toString() ?: coverUrl
                     if (preview != null) {
                         AsyncImage(
                             model = preview,
-                            contentDescription = "Capa",
+                            contentDescription = stringResource(br.com.jogatina.R.string.cover_image),
                             modifier = Modifier
                                 .size(width = 64.dp, height = 84.dp)
                                 .clip(RoundedCornerShape(10.dp)),
@@ -581,7 +582,7 @@ private fun AddToLibraryDialog(
                     Spacer(modifier = Modifier.width(10.dp))
                     TextButton(onClick = onPickCover) {
                         Text(
-                            if (pickedCoverUri != null) "Trocar imagem" else "Enviar capa",
+                            if (pickedCoverUri != null) stringResource(br.com.jogatina.R.string.change_image) else stringResource(br.com.jogatina.R.string.send_cover),
                             color = JogatinaMagenta, fontSize = 14.sp
                         )
                     }
@@ -600,12 +601,12 @@ private fun AddToLibraryDialog(
                         onClick = { status = option },
                         colors = RadioButtonDefaults.colors(selectedColor = JogatinaMagenta)
                     )
-                    Text(option.label, color = JogatinaWhite, fontSize = 14.sp)
+                    Text(stringResource(option.labelRes), color = JogatinaWhite, fontSize = 14.sp)
                 }
             }
             Spacer(modifier = Modifier.height(8.dp))
             Row(verticalAlignment = Alignment.CenterVertically) {
-                Text("Favorito", color = JogatinaWhite, fontSize = 14.sp, modifier = Modifier.weight(1f))
+                Text(stringResource(br.com.jogatina.R.string.favorite), color = JogatinaWhite, fontSize = 14.sp, modifier = Modifier.weight(1f))
                 Switch(
                     checked = favorite,
                     onCheckedChange = { favorite = it },
@@ -615,7 +616,7 @@ private fun AddToLibraryDialog(
             Spacer(modifier = Modifier.height(12.dp))
             Row(horizontalArrangement = Arrangement.End, modifier = Modifier.fillMaxWidth()) {
                 TextButton(onClick = onDismiss, enabled = !busy) {
-                    Text("Cancelar", color = JogatinaWhite70)
+                    Text(stringResource(br.com.jogatina.R.string.cancel), color = JogatinaWhite70)
                 }
                 Button(
                     onClick = { onConfirm(status, favorite) },
@@ -626,7 +627,7 @@ private fun AddToLibraryDialog(
                     if (busy) {
                         CircularProgressIndicator(color = JogatinaWhite, strokeWidth = 2.dp, modifier = Modifier.size(18.dp))
                     } else {
-                        Text(if (isUpdate) "Atualizar" else "Adicionar", fontWeight = FontWeight.SemiBold)
+                        Text(if (isUpdate) stringResource(br.com.jogatina.R.string.update) else stringResource(br.com.jogatina.R.string.add), fontWeight = FontWeight.SemiBold)
                     }
                 }
             }

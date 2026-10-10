@@ -1,8 +1,10 @@
 package br.com.jogatina.ui.chat
 
+import android.content.Context
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
+import br.com.jogatina.R
 import br.com.jogatina.data.auth.AuthResult
 import br.com.jogatina.data.auth.TokenStore
 import br.com.jogatina.data.chat.ChatEvent
@@ -24,7 +26,7 @@ data class ConversationUiState(
     val input: String = "",
     val sending: Boolean = false,
     val connected: Boolean = false,
-    val connectionInfo: String = "Conectando..."
+    val connectionInfo: String = ""
 )
 
 class ConversationViewModel(
@@ -34,12 +36,15 @@ class ConversationViewModel(
     val myUserId: String?,
     initialConversationId: String?,
     private val recipient: FriendDto?,
+    private val appContext: Context,
     private val onAuthExpired: () -> Unit,
     private val onConversationOpened: (String) -> Unit,
     tokenRefresher: (suspend () -> String?)? = null
 ) : ViewModel() {
 
-    private val _state = MutableStateFlow(ConversationUiState())
+    private val _state = MutableStateFlow(
+        ConversationUiState(connectionInfo = appContext.getString(R.string.chat_connecting))
+    )
     val state: StateFlow<ConversationUiState> = _state.asStateFlow()
 
     private var conversationId: String? = initialConversationId
@@ -77,7 +82,7 @@ class ConversationViewModel(
         val text = _state.value.input.trim()
         if (text.isBlank() || _state.value.sending) return
         if (!socket.isConnected) {
-            _state.value = _state.value.copy(error = "Sem conexão. Aguarde reconectar.")
+            _state.value = _state.value.copy(error = appContext.getString(R.string.chat_offline))
             return
         }
         _state.value = _state.value.copy(sending = true)
@@ -90,7 +95,7 @@ class ConversationViewModel(
             else socket.sendMessage(conversationId = null, recipientId = r.friendId, content = text)
         }
         if (!ok) {
-            _state.value = _state.value.copy(sending = false, error = "Não foi possível enviar.")
+            _state.value = _state.value.copy(sending = false, error = appContext.getString(R.string.chat_send_failed))
             return
         }
         _state.value = _state.value.copy(input = "", sending = false)
@@ -154,9 +159,15 @@ class ConversationViewModel(
     private fun onEvent(event: ChatEvent) {
         when (event) {
             is ChatEvent.Connected ->
-                _state.value = _state.value.copy(connected = true, connectionInfo = "Online")
+                _state.value = _state.value.copy(
+                    connected = true,
+                    connectionInfo = appContext.getString(R.string.chat_online)
+                )
             is ChatEvent.Disconnected ->
-                _state.value = _state.value.copy(connected = false, connectionInfo = "Reconectando...")
+                _state.value = _state.value.copy(
+                    connected = false,
+                    connectionInfo = appContext.getString(R.string.chat_reconnecting)
+                )
             is ChatEvent.AuthExpired -> onAuthExpired()
             is ChatEvent.Message -> {
                 if (event.message.conversationId == conversationId) {
@@ -195,6 +206,7 @@ class ConversationViewModel(
             myUserId: String?,
             conversationId: String?,
             recipient: FriendDto?,
+            appContext: Context,
             onAuthExpired: () -> Unit,
             onConversationOpened: (String) -> Unit,
             tokenRefresher: (suspend () -> String?)? = null
@@ -204,7 +216,7 @@ class ConversationViewModel(
                 override fun <T : ViewModel> create(modelClass: Class<T>): T =
                     ConversationViewModel(
                         chat, tokens, baseUrl, myUserId, conversationId,
-                        recipient, onAuthExpired, onConversationOpened, tokenRefresher
+                        recipient, appContext, onAuthExpired, onConversationOpened, tokenRefresher
                     ) as T
             }
     }

@@ -64,6 +64,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
@@ -102,10 +103,10 @@ fun ProfileScreen(
         modifier = modifier.fillMaxSize(),
         topBar = {
             TopAppBar(
-                title = { Text("Perfil", fontWeight = FontWeight.Bold) },
+                title = { Text(stringResource(br.com.jogatina.R.string.profile_title), fontWeight = FontWeight.Bold) },
                 actions = {
                     IconButton(onClick = { viewModel.refresh() }) {
-                        Icon(Icons.Filled.Refresh, contentDescription = "Atualizar")
+                        Icon(Icons.Filled.Refresh, contentDescription = stringResource(br.com.jogatina.R.string.refresh_action))
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(
@@ -129,7 +130,7 @@ fun ProfileScreen(
             if (state.error != null) {
                 Text(state.error!!, color = JogatinaDiscordRed, fontSize = 13.sp)
                 TextButton(onClick = { viewModel.refresh() }) {
-                    Text("Tentar de novo", color = JogatinaMagenta, fontSize = 13.sp)
+                    Text(stringResource(br.com.jogatina.R.string.retry), color = JogatinaMagenta, fontSize = 13.sp)
                 }
             }
 
@@ -157,20 +158,20 @@ fun ProfileScreen(
                         Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
                             InfoRow(
                                 icon = Icons.Filled.Cake,
-                                label = "Nascimento",
-                                value = profile.birthDateDisplay ?: "Não informado"
+                                label = stringResource(br.com.jogatina.R.string.birth_label),
+                                value = profile.birthDateDisplay ?: stringResource(br.com.jogatina.R.string.not_informed)
                             )
                             InfoRow(
                                 icon = Icons.Filled.Interests,
-                                label = "Hobbies",
-                                value = profile.hobbies?.ifBlank { null } ?: "Não informado"
+                                label = stringResource(br.com.jogatina.R.string.hobbies_label),
+                                value = profile.hobbies?.ifBlank { null } ?: stringResource(br.com.jogatina.R.string.not_informed)
                             )
                             InfoRow(
                                 icon = Icons.Filled.Place,
-                                label = "País",
+                                label = stringResource(br.com.jogatina.R.string.country_label),
                                 value = profile.country?.let { code ->
-                                    "${Country(code, countryName(code) ?: code).flagEmoji()} ${countryName(code) ?: code}"
-                                } ?: "Não informado"
+                                    "${flagEmoji(code)} ${countryName(code) ?: code}"
+                                } ?: stringResource(br.com.jogatina.R.string.not_informed)
                             )
                         }
                     }
@@ -184,7 +185,7 @@ fun ProfileScreen(
                                 contentColor = JogatinaWhite
                             )
                         ) {
-                            Text("Editar perfil", fontWeight = FontWeight.SemiBold)
+                            Text(stringResource(br.com.jogatina.R.string.edit_profile), fontWeight = FontWeight.SemiBold)
                         }
                         Button(
                             onClick = onFriendsClick,
@@ -194,7 +195,7 @@ fun ProfileScreen(
                                 contentColor = JogatinaWhite
                             )
                         ) {
-                            Text("Amigos", fontWeight = FontWeight.SemiBold)
+                            Text(stringResource(br.com.jogatina.R.string.friends_button), fontWeight = FontWeight.SemiBold)
                         }
                     }
                 }
@@ -251,7 +252,7 @@ fun ProfileAvatar(
         if (photoUrl != null) {
             AsyncImage(
                 model = photoUrl,
-                contentDescription = "Foto de perfil",
+                contentDescription = stringResource(br.com.jogatina.R.string.profile_photo),
                 modifier = Modifier
                     .fillMaxSize()
                     .clip(CircleShape),
@@ -316,7 +317,7 @@ private fun EditProfileDialog(
                 .padding(20.dp),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            Text("Editar perfil", color = JogatinaWhite, fontWeight = FontWeight.Bold, fontSize = 18.sp)
+            Text(stringResource(br.com.jogatina.R.string.edit_profile), color = JogatinaWhite, fontWeight = FontWeight.Bold, fontSize = 18.sp)
             Spacer(modifier = Modifier.height(12.dp))
 
             Box(contentAlignment = Alignment.BottomEnd) {
@@ -328,7 +329,7 @@ private fun EditProfileDialog(
                         .size(32.dp)
                         .background(JogatinaMagenta, CircleShape)
                 ) {
-                    Icon(Icons.Filled.CameraAlt, contentDescription = "Trocar foto", tint = JogatinaWhite, modifier = Modifier.size(18.dp))
+                    Icon(Icons.Filled.CameraAlt, contentDescription = stringResource(br.com.jogatina.R.string.change_photo), tint = JogatinaWhite, modifier = Modifier.size(18.dp))
                 }
             }
             Spacer(modifier = Modifier.height(12.dp))
@@ -337,8 +338,8 @@ private fun EditProfileDialog(
                 value = birthIso?.toDisplay() ?: "",
                 onValueChange = {},
                 readOnly = true,
-                label = { Text("Nascimento", color = JogatinaWhite70, fontSize = 13.sp) },
-                placeholder = { Text("Selecionar data", color = JogatinaWhite70, fontSize = 14.sp) },
+                label = { Text(stringResource(br.com.jogatina.R.string.birth_label), color = JogatinaWhite70, fontSize = 13.sp) },
+                placeholder = { Text(stringResource(br.com.jogatina.R.string.birth_pick), color = JogatinaWhite70, fontSize = 14.sp) },
                 trailingIcon = {
                     Icon(
                         Icons.Filled.Cake,
@@ -356,7 +357,7 @@ private fun EditProfileDialog(
             OutlinedTextField(
                 value = hobbies,
                 onValueChange = { if (it.length <= 500) hobbies = it },
-                label = { Text("Hobbies (ex.: RPG, futebol)", color = JogatinaWhite70, fontSize = 13.sp) },
+                label = { Text(stringResource(br.com.jogatina.R.string.hobbies_hint), color = JogatinaWhite70, fontSize = 13.sp) },
                 modifier = Modifier.fillMaxWidth(),
                 maxLines = 3,
                 colors = profileFieldColors()
@@ -369,7 +370,7 @@ private fun EditProfileDialog(
             Spacer(modifier = Modifier.height(16.dp))
             Row(horizontalArrangement = Arrangement.End, modifier = Modifier.fillMaxWidth()) {
                 TextButton(onClick = onDismiss, enabled = !saving) {
-                    Text("Cancelar", color = JogatinaWhite70)
+                    Text(stringResource(br.com.jogatina.R.string.cancel), color = JogatinaWhite70)
                 }
                 Button(
                     onClick = {
@@ -383,7 +384,7 @@ private fun EditProfileDialog(
                     if (saving) {
                         CircularProgressIndicator(color = JogatinaWhite, strokeWidth = 2.dp, modifier = Modifier.size(18.dp))
                     } else {
-                        Text("Salvar", fontWeight = FontWeight.SemiBold)
+                        Text(stringResource(br.com.jogatina.R.string.save), fontWeight = FontWeight.SemiBold)
                     }
                 }
             }
@@ -406,12 +407,12 @@ private fun EditProfileDialog(
                     }
                     showDatePicker = false
                 }) {
-                    Text("OK", color = JogatinaMagenta)
+                    Text(stringResource(br.com.jogatina.R.string.ok), color = JogatinaMagenta)
                 }
             },
             dismissButton = {
                 TextButton(onClick = { showDatePicker = false }) {
-                    Text("Cancelar", color = JogatinaWhite70)
+                    Text(stringResource(br.com.jogatina.R.string.cancel), color = JogatinaWhite70)
                 }
             }
         ) {
@@ -443,7 +444,7 @@ private fun CountryDropdown(
     }
     val visible = remember(filter) {
         if (filter.isBlank()) Countries
-        else Countries.filter { it.name.contains(filter, ignoreCase = true) }
+        else Countries.filter { it.displayName().contains(filter, ignoreCase = true) || it.nameEn.contains(filter, ignoreCase = true) }
     }
 
     ExposedDropdownMenuBox(
@@ -451,11 +452,11 @@ private fun CountryDropdown(
         onExpandedChange = { expanded = it }
     ) {
         OutlinedTextField(
-            value = selected?.let { "${it.flagEmoji()}  ${it.name}" } ?: "",
+            value = selected?.let { "${it.flagEmoji()}  ${it.displayName()}" } ?: "",
             onValueChange = {},
             readOnly = true,
-            label = { Text("País", color = JogatinaWhite70, fontSize = 13.sp) },
-            placeholder = { Text("Selecionar país", color = JogatinaWhite70, fontSize = 14.sp) },
+            label = { Text(stringResource(br.com.jogatina.R.string.country_label), color = JogatinaWhite70, fontSize = 13.sp) },
+            placeholder = { Text(stringResource(br.com.jogatina.R.string.country_pick), color = JogatinaWhite70, fontSize = 14.sp) },
             leadingIcon = selected?.let {
                 { Text(it.flagEmoji(), fontSize = 20.sp) }
             },
@@ -475,7 +476,7 @@ private fun CountryDropdown(
             OutlinedTextField(
                 value = filter,
                 onValueChange = { filter = it },
-                placeholder = { Text("Buscar país...", color = JogatinaWhite70, fontSize = 13.sp) },
+                placeholder = { Text(stringResource(br.com.jogatina.R.string.country_search), color = JogatinaWhite70, fontSize = 13.sp) },
                 singleLine = true,
                 modifier = Modifier
                     .fillMaxWidth()
@@ -483,7 +484,7 @@ private fun CountryDropdown(
                 colors = profileFieldColors()
             )
             DropdownMenuItem(
-                text = { Text("Sem país", color = JogatinaWhite70, fontSize = 14.sp) },
+                text = { Text(stringResource(br.com.jogatina.R.string.country_none), color = JogatinaWhite70, fontSize = 14.sp) },
                 onClick = { onSelect(null); expanded = false }
             )
             Column(
@@ -495,7 +496,7 @@ private fun CountryDropdown(
                     DropdownMenuItem(
                         text = {
                             Text(
-                                "${country.flagEmoji()}  ${country.name}",
+                                "${country.flagEmoji()}  ${country.displayName()}",
                                 color = JogatinaWhite,
                                 fontSize = 14.sp
                             )

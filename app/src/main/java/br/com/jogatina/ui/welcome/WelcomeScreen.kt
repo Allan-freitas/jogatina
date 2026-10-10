@@ -44,6 +44,7 @@ import androidx.compose.ui.graphics.drawscope.rotate
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.style.TextAlign
@@ -51,9 +52,13 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
+import android.util.Log
 import androidx.credentials.CredentialManager
 import androidx.credentials.GetCredentialRequest
+import androidx.credentials.exceptions.GetCredentialCancellationException
 import androidx.credentials.exceptions.GetCredentialException
+import androidx.credentials.exceptions.GetCredentialInterruptedException
+import androidx.credentials.exceptions.GetCredentialUnsupportedException
 import androidx.credentials.exceptions.NoCredentialException
 import br.com.jogatina.R
 import br.com.jogatina.data.auth.AuthRepository
@@ -88,6 +93,16 @@ fun WelcomeScreen(
     val state by viewModel.state.collectAsState()
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
+    val googleStrings = GoogleUiStrings(
+        token = stringResource(br.com.jogatina.R.string.gerr_token),
+        invalid = stringResource(br.com.jogatina.R.string.gerr_invalid),
+        cancelled = stringResource(br.com.jogatina.R.string.gerr_cancelled),
+        none = stringResource(br.com.jogatina.R.string.gerr_none),
+        unsupported = stringResource(br.com.jogatina.R.string.gerr_unsupported),
+        interrupted = stringResource(br.com.jogatina.R.string.gerr_interrupted),
+        unavailable = { type -> context.getString(br.com.jogatina.R.string.gerr_unavailable, type ?: "?") },
+        failed = { msg -> context.getString(br.com.jogatina.R.string.gerr_failed, msg) }
+    )
 
     WelcomeContent(
         loading = state.loading,
@@ -97,7 +112,7 @@ fun WelcomeScreen(
         onGoogleEnter = {
             viewModel.clearError()
             scope.launch {
-                signInWithGoogle(context, viewModel)
+                signInWithGoogle(context, viewModel, googleStrings)
             }
         },
         onShowEmail = viewModel::showEmailForm,
@@ -109,10 +124,22 @@ fun WelcomeScreen(
     )
 }
 
+/** Textos localizados do fluxo Google (resolvidos no composable chamador). */
+private data class GoogleUiStrings(
+    val token: String,
+    val invalid: String,
+    val cancelled: String,
+    val none: String,
+    val unsupported: String,
+    val interrupted: String,
+    val unavailable: (String?) -> String,
+    val failed: (String) -> String
+)
+
 /**
  * Fluxo Google: Credential Manager -> Google ID token -> backend (auth/social, provider="google").
  */
-private suspend fun signInWithGoogle(context: Context, viewModel: WelcomeViewModel) {
+private suspend fun signInWithGoogle(context: Context, viewModel: WelcomeViewModel, strings: GoogleUiStrings) {
     val serverClientId = AuthRepository.GOOGLE_SERVER_CLIENT_ID
     if (serverClientId.startsWith("SEU_")) {
         viewModel.onSocialError("Configure o GOOGLE_SERVER_CLIENT_ID para ativar o login Google.")
@@ -131,20 +158,35 @@ private suspend fun signInWithGoogle(context: Context, viewModel: WelcomeViewMod
         val googleCredential = GoogleIdTokenCredential.createFrom(result.credential.data)
         val idToken = googleCredential.idToken
         if (idToken.isBlank()) {
-            viewModel.onSocialError("Não foi possível obter o token do Google.")
+            viewModel.onSocialError(strings.token)
         } else {
             viewModel.socialLoginGoogle(idToken)
         }
     } catch (e: GoogleIdTokenParsingException) {
-        viewModel.onSocialError("Resposta inválida do Google. Tente de novo.")
+        Log.e(TAG_GOOGLE, "parsing", e)
+        viewModel.onSocialError(strings.invalid)
+    } catch (e: GetCredentialCancellationException) {
+        Log.d(TAG_GOOGLE, "cancelado pelo usuário")
+        viewModel.onSocialError(strings.cancelled)
     } catch (e: NoCredentialException) {
-        viewModel.onSocialError("Nenhuma conta Google encontrada neste aparelho.")
+        Log.e(TAG_GOOGLE, "sem credencial", e)
+        viewModel.onSocialError(strings.none)
+    } catch (e: GetCredentialUnsupportedException) {
+        Log.e(TAG_GOOGLE, "não suportado", e)
+        viewModel.onSocialError(strings.unsupported)
+    } catch (e: GetCredentialInterruptedException) {
+        Log.e(TAG_GOOGLE, "interrompido", e)
+        viewModel.onSocialError(strings.interrupted)
     } catch (e: GetCredentialException) {
-        viewModel.onSocialError("Login com Google cancelado ou indisponível.")
+        Log.e(TAG_GOOGLE, "getCredential: ${e.type} ${e.message}", e)
+        viewModel.onSocialError(strings.unavailable(e.type))
     } catch (e: Exception) {
-        viewModel.onSocialError("Falha no login com Google: ${e.message}")
+        Log.e(TAG_GOOGLE, "falha", e)
+        viewModel.onSocialError(strings.failed(e.message ?: "?"))
     }
 }
+
+private const val TAG_GOOGLE = "JogatinaGoogle"
 
 @Composable
 fun WelcomeContent(
@@ -192,7 +234,7 @@ fun WelcomeContent(
                 )
                 Image(
                     painter = painterResource(R.drawable.fighter_pixel),
-                    contentDescription = "Lutador",
+                    contentDescription = stringResource(br.com.jogatina.R.string.fighter_desc),
                     modifier = Modifier.fillMaxSize(),
                     contentScale = ContentScale.Fit,
                     alignment = Alignment.Center
@@ -200,7 +242,7 @@ fun WelcomeContent(
             }
 
             Text(
-                text = "Conecte-se e organize suas jogatinas",
+                text = stringResource(br.com.jogatina.R.string.welcome_title),
                 color = JogatinaWhite,
                 fontSize = 26.sp,
                 fontWeight = FontWeight.Bold,
@@ -209,7 +251,7 @@ fun WelcomeContent(
             )
             Spacer(modifier = Modifier.height(10.dp))
             Text(
-                text = "Crie grupos para jogar seus games favoritos com seus amigos",
+                text = stringResource(br.com.jogatina.R.string.welcome_subtitle),
                 color = JogatinaSubtitle,
                 fontSize = 13.sp,
                 fontWeight = FontWeight.Normal,
@@ -237,11 +279,11 @@ fun WelcomeContent(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 TextButton(onClick = { onShowEmail(EmailMode.LOGIN) }) {
-                    Text("Entrar com e-mail", color = JogatinaWhite70, fontSize = 13.sp)
+                    Text(stringResource(br.com.jogatina.R.string.email_enter), color = JogatinaWhite70, fontSize = 13.sp)
                 }
                 Text("•", color = JogatinaWhite70, fontSize = 13.sp)
                 TextButton(onClick = { onShowEmail(EmailMode.REGISTER) }) {
-                    Text("Criar conta", color = JogatinaWhite, fontSize = 13.sp)
+                    Text(stringResource(br.com.jogatina.R.string.create_account), color = JogatinaWhite, fontSize = 13.sp)
                 }
             }
         }
@@ -300,7 +342,7 @@ private fun GoogleEnterButton(
                 )
                 Spacer(modifier = Modifier.width(12.dp))
                 Text(
-                    text = "Entrar com Google",
+                    text = stringResource(br.com.jogatina.R.string.google_enter),
                     fontSize = 15.sp,
                     fontWeight = FontWeight.SemiBold,
                     color = Color(0xFF1F1F1F)
@@ -382,7 +424,8 @@ private fun EmailAuthDialog(
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
             Text(
-                text = if (isRegister) "Criar conta" else "Entrar com e-mail",
+                text = if (isRegister) stringResource(br.com.jogatina.R.string.auth_title_register)
+                else stringResource(br.com.jogatina.R.string.auth_title_login),
                 color = JogatinaWhite,
                 fontWeight = FontWeight.Bold,
                 fontSize = 18.sp
@@ -394,16 +437,16 @@ private fun EmailAuthDialog(
                 fontSize = 12.sp
             )
             Spacer(modifier = Modifier.height(14.dp))
-            AuthField("E-mail", email, { email = it })
+            AuthField(stringResource(br.com.jogatina.R.string.auth_field_email), email, { email = it })
             if (isRegister) {
                 Spacer(modifier = Modifier.height(8.dp))
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    AuthField("Nome", firstName, { firstName = it }, Modifier.weight(1f))
-                    AuthField("Sobrenome", lastName, { lastName = it }, Modifier.weight(1f))
+                    AuthField(stringResource(br.com.jogatina.R.string.auth_field_first), firstName, { firstName = it }, Modifier.weight(1f))
+                    AuthField(stringResource(br.com.jogatina.R.string.auth_field_last), lastName, { lastName = it }, Modifier.weight(1f))
                 }
             }
             Spacer(modifier = Modifier.height(8.dp))
-            AuthField("Senha (mín. 6)", password, { password = it }, isPassword = true)
+            AuthField(stringResource(br.com.jogatina.R.string.auth_field_password), password, { password = it }, isPassword = true)
             Spacer(modifier = Modifier.height(16.dp))
             Button(
                 onClick = {
@@ -419,11 +462,16 @@ private fun EmailAuthDialog(
                 )
             ) {
                 if (loading) CircularProgressIndicator(color = JogatinaWhite, strokeWidth = 2.dp, modifier = Modifier.size(20.dp))
-                else Text(if (isRegister) "Cadastrar" else "Entrar", fontWeight = FontWeight.SemiBold)
+                else Text(
+                    if (isRegister) stringResource(br.com.jogatina.R.string.auth_submit_register)
+                    else stringResource(br.com.jogatina.R.string.auth_submit_login),
+                    fontWeight = FontWeight.SemiBold
+                )
             }
             TextButton(onClick = { onModeChange(if (isRegister) EmailMode.LOGIN else EmailMode.REGISTER) }) {
                 Text(
-                    if (isRegister) "Já tenho conta" else "Criar conta",
+                    if (isRegister) stringResource(br.com.jogatina.R.string.auth_have_account)
+                    else stringResource(br.com.jogatina.R.string.create_account),
                     color = JogatinaWhite70,
                     fontSize = 13.sp
                 )

@@ -3,6 +3,9 @@
 App nativo em Kotlin + Jetpack Compose para organizar jogatinas com amigos:
 criar grupos e combinar partidas dos games favoritos.
 
+Idiomas: **inglês por padrão** (`res/values/strings.xml`) + **português Brasil**
+(`res/values-pt-rBR/`), inclusive países, reações, status e tempo relativo.
+
 ## Tela de boas-vindas
 
 Segue o mockup: fundo gradiente azul-marinho profundo, faixas angulares

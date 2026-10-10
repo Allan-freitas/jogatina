@@ -1,0 +1,169 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Português (Brasil). O padrão (inglês) está em values/strings.xml. -->
+
+    <string name="app_name">Jogatina</string>
+
+    <!-- Navegação inferior -->
+    <string name="nav_home">Início</string>
+    <string name="nav_favorites">Favoritos</string>
+    <string name="nav_profile">Perfil</string>
+
+    <!-- Compartilhados -->
+    <string name="retry">Tentar de novo</string>
+    <string name="cancel">Cancelar</string>
+    <string name="back">Voltar</string>
+    <string name="save">Salvar</string>
+    <string name="send">Enviar</string>
+    <string name="delete">Apagar</string>
+    <string name="remove">Remover</string>
+    <string name="add">Adicionar</string>
+    <string name="update">Atualizar</string>
+    <string name="logout">Sair</string>
+    <string name="refresh_action">Atualizar</string>
+    <string name="not_informed">Não informado</string>
+
+    <!-- Boas-vindas -->
+    <string name="welcome_title">Conecte-se e organize suas jogatinas</string>
+    <string name="welcome_subtitle">Crie grupos para jogar seus games favoritos com seus amigos</string>
+    <string name="discord_enter">Entrar</string>
+    <string name="google_enter">Entrar com Google</string>
+    <string name="email_enter">Entrar com e-mail</string>
+    <string name="create_account">Criar conta</string>
+    <string name="auth_title_login">Entrar com e-mail</string>
+    <string name="auth_title_register">Criar conta</string>
+    <string name="auth_field_email">E-mail</string>
+    <string name="auth_field_first">Nome</string>
+    <string name="auth_field_last">Sobrenome</string>
+    <string name="auth_field_password">Senha (mín. 6)</string>
+    <string name="auth_submit_register">Cadastrar</string>
+    <string name="auth_submit_login">Entrar</string>
+    <string name="auth_have_account">Já tenho conta</string>
+    <string name="account_created_login">Conta criada! Faça login para continuar.</string>
+    <string name="gerr_token">Não foi possível obter o token do Google.</string>
+    <string name="gerr_invalid">Resposta inválida do Google. Tente de novo.</string>
+    <string name="gerr_cancelled">Login com Google cancelado.</string>
+    <string name="gerr_none">Nenhuma conta Google encontrada neste aparelho.</string>
+    <string name="gerr_unsupported">Este aparelho não suporta login com Google. Atualize o Play Services.</string>
+    <string name="gerr_interrupted">Login interrompido. Tente de novo.</string>
+    <string name="gerr_unavailable">Google indisponível agora (%1$s). Tente de novo.</string>
+    <string name="gerr_failed">Falha no login com Google: %1$s</string>
+
+    <!-- Feed -->
+    <string name="greeting">Olá, %1$s</string>
+    <string name="greeting_fallback">Olá</string>
+    <string name="composer_hint">No que você está pensando?</string>
+    <string name="publish">Publicar</string>
+    <string name="empty_feed">Nenhum post ainda. Seja o primeiro a publicar!</string>
+    <string name="post_empty">Escreva algo ou anexe uma imagem.</string>
+    <string name="loved">Amei!</string>
+    <string name="love">Amei</string>
+    <string name="comment_hint">Comentar...</string>
+    <string name="reply">Responder</string>
+    <string name="replying_to">Respondendo a %1$s</string>
+    <string name="time_now">agora</string>
+    <string name="time_min">há %1$dmin</string>
+    <string name="time_hour">há %1$dh</string>
+    <string name="time_day">há %1$dd</string>
+    <string name="reaction_heart">Amei</string>
+    <string name="reaction_celebrate">Parabéns</string>
+    <string name="reaction_wow">Uau</string>
+    <string name="reaction_haha">Haha</string>
+    <string name="reaction_insightful">Ideia</string>
+
+    <!-- Games -->
+    <string name="library_title">Meus Jogos</string>
+    <string name="filter_all">Todos</string>
+    <string name="status_wishlist">Quero jogar</string>
+    <string name="status_playing">Jogando</string>
+    <string name="status_completed">Zerado</string>
+    <string name="library_empty">Nenhum jogo aqui. Toque na lupa para buscar no catálogo!</string>
+    <string name="catalog_title">Catálogo</string>
+    <string name="search_games_hint">Buscar jogo...</string>
+    <string name="genre_hint">Gênero</string>
+    <string name="platform_hint">Plataforma</string>
+    <string name="load_more">Carregar mais</string>
+    <string name="added">Adicionado</string>
+    <string name="in_library">Na biblioteca</string>
+    <string name="favorite">Favorito</string>
+    <string name="conflict_msg">Já está na sua biblioteca.</string>
+    <string name="cover_section">Capa do jogo (vale para o catálogo)</string>
+    <string name="send_cover">Enviar capa</string>
+    <string name="change_image">Trocar imagem</string>
+
+    <!-- Notificações -->
+    <string name="notif_title">Notificações</string>
+    <string name="tab_all">Todas</string>
+    <string name="tab_unread">Não lidas (%1$d)</string>
+    <string name="mark_all_read">Ler todas</string>
+    <string name="empty_notif">Nenhuma notificação ainda.</string>
+    <string name="empty_unread">Nada por aqui. Você está em dia!</string>
+    <string name="notif_friend_request">Pedido de amizade</string>
+    <string name="notif_friend_accepted">Amizade aceita</string>
+    <string name="notif_new_message">Nova mensagem</string>
+    <string name="notif_generic">Notificação</string>
+
+    <!-- Perfil -->
+    <string name="profile_title">Perfil</string>
+    <string name="edit_profile">Editar perfil</string>
+    <string name="birth_label">Nascimento</string>
+    <string name="hobbies_label">Hobbies</string>
+    <string name="hobbies_hint">Hobbies (ex.: RPG, futebol)</string>
+    <string name="country_label">País</string>
+    <string name="birth_pick">Selecionar data</string>
+    <string name="country_pick">Selecionar país</string>
+    <string name="country_search">Buscar país...</string>
+    <string name="country_none">Sem país</string>
+    <string name="friends_button">Amigos</string>
+
+    <!-- Amigos -->
+    <string name="friends_title">Amigos</string>
+    <string name="tab_friends">Meus amigos (%1$d)</string>
+    <string name="tab_requests">Pedidos</string>
+    <string name="tab_requests_unread">Pedidos (%1$d)</string>
+    <string name="tab_search">Buscar</string>
+    <string name="friends_empty">Nenhum amigo ainda. Vá em Buscar para encontrar jogadores!</string>
+    <string name="requests_empty">Nenhum pedido pendente.</string>
+    <string name="incoming_text">Quer ser seu amigo</string>
+    <string name="waiting_text">Aguardando resposta</string>
+    <string name="badge_sent">Enviado</string>
+    <string name="badge_friends">Amigos</string>
+    <string name="search_people_hint">Nome ou e-mail (mín. 2 letras)...</string>
+    <string name="no_friends_chat">Você ainda não tem amigos. Envie um pedido na aba social!</string>
+    <string name="accept">Aceitar</string>
+    <string name="decline">Recusar</string>
+    <string name="online">Online</string>
+    <string name="offline">Offline</string>
+
+    <!-- Chat -->
+    <string name="chat_title">Conversas</string>
+    <string name="new_chat">Nova conversa</string>
+    <string name="pick_friend">Escolha um amigo</string>
+    <string name="chat_empty">Nenhuma conversa ainda. Toque em + para chamar um amigo!</string>
+    <string name="say_hi">Diga oi!</string>
+    <string name="no_messages">Nenhuma mensagem ainda. Diga oi!</string>
+    <string name="message_hint">Mensagem...</string>
+    <string name="chat_online">Online</string>
+    <string name="chat_connecting">Conectando...</string>
+    <string name="chat_reconnecting">Reconectando...</string>
+    <string name="chat_offline">Sem conexão. Aguarde reconectar.</string>
+    <string name="chat_send_failed">Não foi possível enviar.</string>
+    <string name="notifications">Notificações</string>
+    <string name="comments">Comentários</string>
+    <string name="react">Reagir</string>
+    <string name="attach_image">Anexar imagem</string>
+    <string name="attached_image">Imagem anexada</string>
+    <string name="remove_image">Remover imagem</string>
+    <string name="post_image">Imagem do post</string>
+    <string name="cancel_reply">Cancelar resposta</string>
+    <string name="conversations">Conversas</string>
+    <string name="chat_with">Conversar</string>
+    <string name="player">Jogador</string>
+    <string name="fighter_desc">Arte do lutador</string>
+    <string name="conversation_fallback">Conversa</string>
+    <string name="search_catalog">Buscar no catálogo</string>
+    <string name="cover_image">Imagem de capa</string>
+    <string name="change_photo">Trocar foto</string>
+    <string name="profile_photo">Foto de perfil</string>
+    <string name="ok">OK</string>
+</resources>

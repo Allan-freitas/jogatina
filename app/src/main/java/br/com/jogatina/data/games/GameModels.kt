@@ -11,10 +11,10 @@ package br.com.jogatina.data.games
  * coverImageUrl é relativo (ex.: "/game-covers/x.jpg"); complete com a base.
  */
 
-enum class GameStatus(val api: String, val label: String) {
-    WISHLIST("Wishlist", "Quero jogar"),
-    PLAYING("Playing", "Jogando"),
-    COMPLETED("Completed", "Zerado");
+enum class GameStatus(val api: String, val labelRes: Int) {
+    WISHLIST("Wishlist", br.com.jogatina.R.string.status_wishlist),
+    PLAYING("Playing", br.com.jogatina.R.string.status_playing),
+    COMPLETED("Completed", br.com.jogatina.R.string.status_completed);
 
     companion object {
         fun fromApi(value: String?): GameStatus =

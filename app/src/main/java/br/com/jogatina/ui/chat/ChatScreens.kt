@@ -44,6 +44,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
@@ -80,18 +81,18 @@ fun ChatListScreen(
         modifier = modifier.fillMaxSize(),
         topBar = {
             TopAppBar(
-                title = { Text("Conversas", fontWeight = FontWeight.Bold) },
+                title = { Text(stringResource(br.com.jogatina.R.string.chat_title), fontWeight = FontWeight.Bold) },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Voltar")
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(br.com.jogatina.R.string.back))
                     }
                 },
                 actions = {
                     IconButton(onClick = { viewModel.openNewChat() }) {
-                        Icon(Icons.Filled.AddComment, contentDescription = "Nova conversa")
+                        Icon(Icons.Filled.AddComment, contentDescription = stringResource(br.com.jogatina.R.string.new_chat))
                     }
                     IconButton(onClick = { viewModel.refresh() }) {
-                        Icon(Icons.Filled.Refresh, contentDescription = "Atualizar")
+                        Icon(Icons.Filled.Refresh, contentDescription = stringResource(br.com.jogatina.R.string.refresh_action))
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(
@@ -123,7 +124,7 @@ fun ChatListScreen(
                 }
             } else if (state.conversations.isEmpty()) {
                 Text(
-                    "Nenhuma conversa ainda. Toque em + para chamar um amigo!",
+                    stringResource(br.com.jogatina.R.string.chat_empty),
                     color = JogatinaSubtitle, fontSize = 14.sp,
                     modifier = Modifier.padding(24.dp)
                 )
@@ -191,7 +192,7 @@ private fun ConversationRow(
                     overflow = TextOverflow.Ellipsis
                 )
                 Text(
-                    conversation.lastMessage?.content ?: "Diga oi!",
+                    conversation.lastMessage?.content ?: stringResource(br.com.jogatina.R.string.say_hi),
                     color = JogatinaWhite70,
                     fontSize = 13.sp,
                     maxLines = 1,
@@ -232,9 +233,9 @@ private fun NewChatDialog(
                 .background(JogatinaNavyMid)
                 .padding(20.dp)
         ) {
-            Text("Nova conversa", color = JogatinaWhite, fontWeight = FontWeight.Bold, fontSize = 18.sp)
+            Text(stringResource(br.com.jogatina.R.string.new_chat), color = JogatinaWhite, fontWeight = FontWeight.Bold, fontSize = 18.sp)
             Spacer(modifier = Modifier.height(4.dp))
-            Text("Escolha um amigo", color = JogatinaWhite70, fontSize = 13.sp)
+            Text(stringResource(br.com.jogatina.R.string.pick_friend), color = JogatinaWhite70, fontSize = 13.sp)
             Spacer(modifier = Modifier.height(12.dp))
             if (loading) {
                 Box(modifier = Modifier.fillMaxWidth().padding(24.dp), contentAlignment = Alignment.Center) {
@@ -242,7 +243,7 @@ private fun NewChatDialog(
                 }
             } else if (friends.isEmpty()) {
                 Text(
-                    "Você ainda não tem amigos. Envie um pedido na aba social!",
+                    stringResource(br.com.jogatina.R.string.no_friends_chat),
                     color = JogatinaSubtitle, fontSize = 14.sp
                 )
             } else {
@@ -274,9 +275,9 @@ private fun NewChatDialog(
                             }
                             Spacer(modifier = Modifier.width(10.dp))
                             Column(modifier = Modifier.weight(1f)) {
-                                Text(friend.fullName.ifBlank { "Jogador" }, color = JogatinaWhite, fontSize = 14.sp, fontWeight = FontWeight.SemiBold)
+                                Text(friend.fullName.ifBlank { stringResource(br.com.jogatina.R.string.player) }, color = JogatinaWhite, fontSize = 14.sp, fontWeight = FontWeight.SemiBold)
                                 Text(
-                                    if (friend.isOnline) "Online" else "Offline",
+                                    if (friend.isOnline) stringResource(br.com.jogatina.R.string.online) else stringResource(br.com.jogatina.R.string.offline),
                                     color = if (friend.isOnline) Color(0xFF4CAF50) else JogatinaSubtitle,
                                     fontSize = 12.sp
                                 )
@@ -318,7 +319,7 @@ fun ConversationScreen(
                             overflow = TextOverflow.Ellipsis
                         )
                         Text(
-                            if (state.connected) "Online" else state.connectionInfo,
+                            if (state.connected) stringResource(br.com.jogatina.R.string.chat_online) else state.connectionInfo,
                             color = if (state.connected) Color(0xFF4CAF50) else JogatinaSubtitle,
                             fontSize = 12.sp
                         )
@@ -326,7 +327,7 @@ fun ConversationScreen(
                 },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Voltar")
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(br.com.jogatina.R.string.back))
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(
@@ -355,7 +356,7 @@ fun ConversationScreen(
             } else if (state.messages.isEmpty()) {
                 Box(modifier = Modifier.fillMaxWidth().weight(1f), contentAlignment = Alignment.Center) {
                     Text(
-                        "Nenhuma mensagem ainda. Diga oi!",
+                        stringResource(br.com.jogatina.R.string.no_messages),
                         color = JogatinaSubtitle, fontSize = 14.sp,
                         textAlign = TextAlign.Center
                     )
@@ -385,7 +386,7 @@ fun ConversationScreen(
                 OutlinedTextField(
                     value = state.input,
                     onValueChange = viewModel::onInputChange,
-                    placeholder = { Text("Mensagem...", color = JogatinaWhite70, fontSize = 14.sp) },
+                    placeholder = { Text(stringResource(br.com.jogatina.R.string.message_hint), color = JogatinaWhite70, fontSize = 14.sp) },
                     modifier = Modifier.weight(1f),
                     maxLines = 4,
                     shape = RoundedCornerShape(24.dp),
@@ -401,7 +402,7 @@ fun ConversationScreen(
                     if (state.sending) {
                         CircularProgressIndicator(color = JogatinaWhite, strokeWidth = 2.dp, modifier = Modifier.size(18.dp))
                     } else {
-                        Icon(Icons.AutoMirrored.Filled.Send, contentDescription = "Enviar", tint = JogatinaMagenta)
+                        Icon(Icons.AutoMirrored.Filled.Send, contentDescription = stringResource(br.com.jogatina.R.string.send), tint = JogatinaMagenta)
                     }
                 }
             }
@@ -437,7 +438,7 @@ private fun MessageBubble(content: String, time: String, mine: Boolean) {
 private fun ChatListPreview() {
     JogatinaTheme {
         Box(Modifier.background(JogatinaNavyBottom).padding(12.dp)) {
-            Text("Conversas", color = JogatinaWhite)
+            Text(stringResource(br.com.jogatina.R.string.chat_title), color = JogatinaWhite)
         }
     }
 }

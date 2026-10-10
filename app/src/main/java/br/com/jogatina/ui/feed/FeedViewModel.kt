@@ -1,9 +1,11 @@
 package br.com.jogatina.ui.feed
 
+import android.content.Context
 import android.net.Uri
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
+import br.com.jogatina.R
 import br.com.jogatina.data.auth.AuthResult
 import br.com.jogatina.data.auth.TokenStore
 import br.com.jogatina.data.feed.CommentDto
@@ -44,6 +46,7 @@ class FeedViewModel(
     private val feed: FeedRepository,
     private val users: UserRepository,
     private val tokens: TokenStore,
+    private val appContext: Context,
     private val onAuthExpired: () -> Unit
 ) : ViewModel() {
 
@@ -110,7 +113,7 @@ class FeedViewModel(
         if (current.publishing) return
         val text = current.composerText.trim()
         if (text.isBlank() && current.pickedImage == null) {
-            _state.value = current.copy(error = "Escreva algo ou anexe uma imagem.")
+            _state.value = current.copy(error = appContext.getString(R.string.post_empty))
             return
         }
         _state.value = current.copy(publishing = true, error = null)
@@ -279,12 +282,13 @@ class FeedViewModel(
             feed: FeedRepository,
             users: UserRepository,
             tokens: TokenStore,
+            appContext: Context,
             onAuthExpired: () -> Unit
         ): ViewModelProvider.Factory =
             object : ViewModelProvider.Factory {
                 @Suppress("UNCHECKED_CAST")
                 override fun <T : ViewModel> create(modelClass: Class<T>): T =
-                    FeedViewModel(feed, users, tokens, onAuthExpired) as T
+                    FeedViewModel(feed, users, tokens, appContext, onAuthExpired) as T
             }
     }
 }

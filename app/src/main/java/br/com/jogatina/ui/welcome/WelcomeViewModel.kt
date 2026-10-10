@@ -1,8 +1,10 @@
 package br.com.jogatina.ui.welcome
 
+import android.content.Context
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
+import br.com.jogatina.R
 import br.com.jogatina.data.auth.AuthRepository
 import br.com.jogatina.data.auth.AuthResult
 import br.com.jogatina.data.auth.TokenStore
@@ -23,7 +25,8 @@ enum class EmailMode { LOGIN, REGISTER }
 
 class WelcomeViewModel(
     private val auth: AuthRepository,
-    private val tokens: TokenStore
+    private val tokens: TokenStore,
+    private val appContext: Context
 ) : ViewModel() {
 
     private val _state = MutableStateFlow(WelcomeUiState(loggedIn = tokens.isLoggedIn))
@@ -92,7 +95,7 @@ class WelcomeViewModel(
                         is AuthResult.Error -> {
                             _state.value = _state.value.copy(
                                 loading = false,
-                                error = "Conta criada! Faça login para continuar."
+                                error = appContext.getString(R.string.account_created_login)
                             )
                         }
                     }
@@ -110,11 +113,15 @@ class WelcomeViewModel(
     }
 
     companion object {
-        fun factory(auth: AuthRepository, tokens: TokenStore): ViewModelProvider.Factory =
+        fun factory(
+            auth: AuthRepository,
+            tokens: TokenStore,
+            appContext: Context
+        ): ViewModelProvider.Factory =
             object : ViewModelProvider.Factory {
                 @Suppress("UNCHECKED_CAST")
                 override fun <T : ViewModel> create(modelClass: Class<T>): T =
-                    WelcomeViewModel(auth, tokens) as T
+                    WelcomeViewModel(auth, tokens, appContext) as T
             }
     }
 }

@@ -5,12 +5,22 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.viewModels
+import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
-import androidx.compose.material3.adaptive.navigationsuite.NavigationSuiteScaffold
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -18,10 +28,20 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.tooling.preview.PreviewScreenSizes
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import br.com.jogatina.data.api.ApiClient
 import br.com.jogatina.data.auth.AuthRepository
@@ -78,10 +98,10 @@ class MainActivity : ComponentActivity() {
         FriendsRepository(apiClient) { tokenStore.accessToken }
     }
     private val welcomeViewModel: WelcomeViewModel by viewModels {
-        WelcomeViewModel.factory(authRepository, tokenStore)
+        WelcomeViewModel.factory(authRepository, tokenStore, applicationContext)
     }
     private val feedViewModel: FeedViewModel by viewModels {
-        FeedViewModel.factory(feedRepository, userRepository, tokenStore) {
+        FeedViewModel.factory(feedRepository, userRepository, tokenStore, applicationContext) {
             welcomeViewModel.logout()
         }
     }
@@ -189,25 +209,18 @@ fun JogatinaApp(
     val notificationsState = notificationsViewModel?.state?.collectAsState()?.value
     val chatListState = chatListViewModel?.state?.collectAsState()?.value
 
-    NavigationSuiteScaffold(
-        navigationSuiteItems = {
-            AppDestinations.entries.forEach {
-                item(
-                    icon = {
-                        Icon(
-                            painterResource(it.icon),
-                            contentDescription = it.label
-                        )
-                    },
-                    label = { Text(it.label) },
-                    selected = it == currentDestination,
-                    onClick = { currentDestination = it }
-                )
-            }
+    Scaffold(
+        modifier = Modifier.fillMaxSize(),
+        containerColor = br.com.jogatina.ui.theme.JogatinaNavyBottom,
+        bottomBar = {
+            GamerBottomBar(
+                selected = currentDestination,
+                onSelect = { currentDestination = it }
+            )
         }
-    ) {
-        Scaffold(modifier = Modifier.fillMaxSize()) { innerPadding ->
+    ) { innerPadding ->
             val conversationKey = openConversationId ?: newChatFriend?.let { "new:${it.friendId}" }
+            val appContext = androidx.compose.ui.platform.LocalContext.current.applicationContext
             when {
                 conversationKey != null && chatRepository != null && tokenStore != null -> {
                     val conversationVm: ConversationViewModel = viewModel(
@@ -219,6 +232,7 @@ fun JogatinaApp(
                             myUserId = tokenStore.userId,
                             conversationId = openConversationId,
                             recipient = newChatFriend,
+                            appContext = appContext,
                             onAuthExpired = onLogout,
                             onConversationOpened = { id -> openConversationId = id },
                             tokenRefresher = tokenRefresher
@@ -227,7 +241,7 @@ fun JogatinaApp(
                     val title = openConversationId?.let { id ->
                         chatListState?.conversations?.firstOrNull { it.conversationId == id }
                             ?.title(tokenStore.userId)
-                    } ?: newChatFriend?.fullName?.ifBlank { "Conversa" } ?: "Conversa"
+                    } ?: newChatFriend?.fullName?.ifBlank { stringResource(br.com.jogatina.R.string.conversation_fallback) } ?: stringResource(br.com.jogatina.R.string.conversation_fallback)
                     ConversationScreen(
                         viewModel = conversationVm,
                         title = title,
@@ -314,16 +328,104 @@ fun JogatinaApp(
                 }
             }
         }
-    }
 }
 
 enum class AppDestinations(
-    val label: String,
+    val labelRes: Int,
     val icon: Int,
 ) {
-    HOME("Home", R.drawable.ic_home),
-    FAVORITES("Favorites", R.drawable.ic_favorite),
-    PROFILE("Profile", R.drawable.ic_account_box),
+    HOME(R.string.nav_home, R.drawable.ic_home),
+    FAVORITES(R.string.nav_favorites, R.drawable.ic_favorite),
+    PROFILE(R.string.nav_profile, R.drawable.ic_account_box),
+}
+
+/**
+ * Bottom bar gamer: fina (60dp), ícones compactos (22dp), fundo navy com
+ * filete neon no topo e indicador brilhante no item selecionado.
+ */
+@Composable
+private fun GamerBottomBar(
+    selected: AppDestinations,
+    onSelect: (AppDestinations) -> Unit
+) {
+    Column(modifier = Modifier.fillMaxWidth()) {
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(2.dp)
+                .background(
+                    Brush.horizontalGradient(
+                        colors = listOf(
+                            Color.Transparent,
+                            br.com.jogatina.ui.theme.JogatinaMagenta.copy(alpha = 0.7f),
+                            Color.Transparent
+                        )
+                    )
+                )
+        )
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(60.dp)
+                .background(br.com.jogatina.ui.theme.JogatinaNavyMid),
+            horizontalArrangement = Arrangement.SpaceEvenly,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            AppDestinations.entries.forEach { destination ->
+                val isSelected = destination == selected
+                Column(
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.Center,
+                    modifier = Modifier
+                        .weight(1f)
+                        .clickable { onSelect(destination) }
+                        .padding(vertical = 6.dp)
+                ) {
+                    if (isSelected) {
+                        Box(
+                            modifier = Modifier
+                                .size(width = 22.dp, height = 3.dp)
+                                .shadow(
+                                    elevation = 6.dp,
+                                    shape = RoundedCornerShape(2.dp),
+                                    ambientColor = br.com.jogatina.ui.theme.JogatinaMagenta,
+                                    spotColor = br.com.jogatina.ui.theme.JogatinaMagenta
+                                )
+                                .clip(RoundedCornerShape(2.dp))
+                                .background(br.com.jogatina.ui.theme.JogatinaMagenta)
+                        )
+                    } else {
+                        Box(modifier = Modifier.size(width = 22.dp, height = 3.dp))
+                    }
+                    Spacer(modifier = Modifier.height(3.dp))
+                    Icon(
+                        painterResource(destination.icon),
+                        contentDescription = stringResource(destination.labelRes),
+                        tint = if (isSelected) {
+                            br.com.jogatina.ui.theme.JogatinaMagenta
+                        } else {
+                            br.com.jogatina.ui.theme.JogatinaWhite.copy(alpha = 0.45f)
+                        },
+                        modifier = Modifier.size(22.dp)
+                    )
+                    Text(
+                        text = stringResource(destination.labelRes),
+                        color = if (isSelected) {
+                            br.com.jogatina.ui.theme.JogatinaWhite
+                        } else {
+                            br.com.jogatina.ui.theme.JogatinaWhite.copy(alpha = 0.45f)
+                        },
+                        fontSize = 10.sp,
+                        fontWeight = if (isSelected) {
+                            FontWeight.Bold
+                        } else {
+                            FontWeight.Normal
+                        }
+                    )
+                }
+            }
+        }
+    }
 }
 
 @Composable
