@@ -11,7 +11,8 @@ class FeedRepository(
     private val token: () -> String?
 ) {
     fun imageUrl(relative: String?): String? =
-        relative?.let { api.baseUrl.trimEnd('/') + it }
+        relative?.takeIf { it.isNotBlank() && !it.equals("null", ignoreCase = true) }
+            ?.let { api.baseUrl.trimEnd('/') + it }
 
     suspend fun getFeed(page: Int = 1, pageSize: Int = 20): AuthResult<List<PostDto>> =
         api.get("feed/posts?page=$page&pageSize=$pageSize", token()).map { raw ->

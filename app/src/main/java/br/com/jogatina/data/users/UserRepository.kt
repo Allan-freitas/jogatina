@@ -10,7 +10,8 @@ class UserRepository(
     private val token: () -> String?
 ) {
     fun photoUrl(relative: String?): String? =
-        relative?.let { api.baseUrl.trimEnd('/') + it }
+        relative?.takeIf { it.isNotBlank() && !it.equals("null", ignoreCase = true) }
+            ?.let { api.baseUrl.trimEnd('/') + it }
 
     suspend fun getMyProfile(): AuthResult<UserProfile> =
         api.get("users/me", token()).map(::parseProfile)

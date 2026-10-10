@@ -42,12 +42,20 @@ Após o login o usuário cai no **Feed**, com saudação **"Olá, {nome}"**
   troca de status/favorito é **DELETE + POST**.
 
 ## Notificações
-
 - Sino com **badge de não-lidas** na TopAppBar do Feed → tela
   **Notificações**: lista com ícone por tipo (`friend_request`,
   `friend_accepted`, `new_message`), filtro Todas/Não lidas, tap marca como
   lida (`PATCH notifications/{id}/read`), "ler todas"
   (`POST notifications/read-all`), auto-refresh a cada 60 s na tela.
+
+## Chat
+
+Botão de conversa na TopAppBar do Feed (badge com não-lidas) → **Conversas**
+(`GET chat/conversations`, selo por conversa, nova conversa via amigos em
+`GET users/me/friends`) → **Conversa** (histórico `GET`, tempo real via
+WebSocket `/ws/chat?access_token=` com ping, envio, "lida" automática,
+reconexão). Nova conversa: primeira mensagem com `recipientId`, o app
+descobre o id criado e abre o histórico.
 
 ## Perfil
 
@@ -75,6 +83,12 @@ app/src/main/java/br/com/jogatina/
 ├── data/notifications/
 │   ├── NotificationModels.kt  # NotificationDto
 │   └── NotificationsRepository.kt
+├── data/chat/
+│   ├── ChatModels.kt          # ConversationDto, ChatMessageDto
+│   ├── ChatRepository.kt      # REST do chat
+│   └── ChatSocket.kt          # WebSocket (OkHttp): send/read/ping
+├── data/social/
+│   └── FriendsRepository.kt   # amigos p/ nova conversa
 └── ui/
     ├── theme/                 # paleta navy + magenta (dynamicColor off)
     ├── welcome/
@@ -93,6 +107,10 @@ app/src/main/java/br/com/jogatina/
     └── profile/
         ├── ProfileScreen.kt       # foto, nascimento, hobbies + edição
         └── ProfileViewModel.kt
+    └── chat/
+        ├── ChatScreens.kt         # lista, conversa, nova conversa
+        ├── ChatListViewModel.kt
+        └── ConversationViewModel.kt
 ```
 
 ## API
@@ -119,6 +137,10 @@ Base de produção: `https://agfapp.com` (ver `AuthRepository.DEFAULT_BASE_URL`)
 | Notificações      | `GET /notifications`  | `?onlyUnread=` → lista (pedidos, aceites, mensagens) |
 | Ler uma           | `PATCH /notifications/{id}/read` | marca como lida |
 | Ler todas         | `POST /notifications/read-all` | retorna a quantidade marcada |
+| Conversas         | `GET /chat/conversations` | participantes, última msg, não-lidas |
+| Histórico         | `GET /chat/conversations/{id}/messages` | cronológico, `?page=&pageSize=` |
+| Tempo real        | `WS /ws/chat?access_token=` | frames send/read/ping ↔ message/read_ok/pong/error |
+| Amigos            | `GET /users/me/friends` | base da nova conversa |
 | Saúde             | `GET /health`         | status da API + banco |
 | Meu perfil        | `GET /users/me`       | perfil do logado (nome do "Olá") |
 | Editar perfil     | `PUT /users/me`       | `{ birthDate?, hobbies?, country? }` (ISO yyyy-MM-dd, ISO alpha-2) |
@@ -153,6 +175,8 @@ Contratos espelham `CleanArchitecture.slnx`:
   `Add_Feed`, `Add_PostReactionKind`).
 - `src/Web.Api/Endpoints/Notifications/`: `Notifications.cs` (lista),
   `MarkAsRead.cs`, `MarkAllAsRead.cs` (sem migration — sem mudança de modelo).
+- Chat: `Endpoints/Chat/GetMessages.cs` (histórico) + `Chat/WsChat.cs`
+  (tempo real, auth `sub`/`NameIdentifier` + `HttpContext.User` no escopo).
 - Perfil: `User.PhotoUrl/BirthDate/Hobbies/Country` + migrations
   `Add_UserProfileFields`, `Add_UserCountry`; endpoints `UpdateProfile.cs`
   (`PUT users/me`), `UploadPhoto.cs` (`POST users/me/photo`), `GetMe.cs`.

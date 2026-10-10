@@ -12,7 +12,8 @@ class GamesRepository(
     private val token: () -> String?
 ) {
     fun coverUrl(relative: String?): String? =
-        relative?.let { api.baseUrl.trimEnd('/') + it }
+        relative?.takeIf { it.isNotBlank() && !it.equals("null", ignoreCase = true) }
+            ?.let { api.baseUrl.trimEnd('/') + it }
 
     suspend fun getGames(
         search: String? = null,

@@ -90,6 +90,8 @@ fun FeedScreen(
     onLogout: () -> Unit,
     unreadCount: Int = 0,
     onNotificationsClick: () -> Unit = {},
+    unreadChatCount: Int = 0,
+    onChatClick: () -> Unit = {},
     modifier: Modifier = Modifier
 ) {
     val state by viewModel.state.collectAsState()
@@ -123,6 +125,22 @@ fun FeedScreen(
                     )
                 },
                 actions = {
+                    IconButton(onClick = onChatClick) {
+                        BadgedBox(
+                            badge = {
+                                if (unreadChatCount > 0) {
+                                    Badge(
+                                        containerColor = JogatinaDiscordRed,
+                                        contentColor = JogatinaWhite
+                                    ) {
+                                        Text(if (unreadChatCount > 99) "99+" else "$unreadChatCount")
+                                    }
+                                }
+                            }
+                        ) {
+                            Icon(Icons.Filled.ChatBubbleOutline, contentDescription = "Conversas")
+                        }
+                    }
                     IconButton(onClick = onNotificationsClick) {
                         BadgedBox(
                             badge = {
