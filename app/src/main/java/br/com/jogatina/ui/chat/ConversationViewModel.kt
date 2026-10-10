@@ -35,22 +35,27 @@ class ConversationViewModel(
     initialConversationId: String?,
     private val recipient: FriendDto?,
     private val onAuthExpired: () -> Unit,
-    private val onConversationOpened: (String) -> Unit
+    private val onConversationOpened: (String) -> Unit,
+    tokenRefresher: (suspend () -> String?)? = null
 ) : ViewModel() {
 
     private val _state = MutableStateFlow(ConversationUiState())
     val state: StateFlow<ConversationUiState> = _state.asStateFlow()
 
     private var conversationId: String? = initialConversationId
-    private val socket = ChatSocket(baseUrl, viewModelScope)
+    private val socket = ChatSocket(
+        baseUrl,
+        viewModelScope,
+        tokenProvider = { tokens.accessToken },
+        tokenRefresher = tokenRefresher
+    )
     private var eventsJob: Job? = null
 
     init {
-        val token = tokens.accessToken
-        if (token.isNullOrBlank()) {
+        if (tokens.accessToken.isNullOrBlank()) {
             onAuthExpired()
         } else {
-            socket.connect(token)
+            socket.connect()
             eventsJob = viewModelScope.launch {
                 socket.events.collect { event -> onEvent(event) }
             }
@@ -152,6 +157,7 @@ class ConversationViewModel(
                 _state.value = _state.value.copy(connected = true, connectionInfo = "Online")
             is ChatEvent.Disconnected ->
                 _state.value = _state.value.copy(connected = false, connectionInfo = "Reconectando...")
+            is ChatEvent.AuthExpired -> onAuthExpired()
             is ChatEvent.Message -> {
                 if (event.message.conversationId == conversationId) {
                     _state.value = _state.value.copy(
@@ -190,14 +196,15 @@ class ConversationViewModel(
             conversationId: String?,
             recipient: FriendDto?,
             onAuthExpired: () -> Unit,
-            onConversationOpened: (String) -> Unit
+            onConversationOpened: (String) -> Unit,
+            tokenRefresher: (suspend () -> String?)? = null
         ): ViewModelProvider.Factory =
             object : ViewModelProvider.Factory {
                 @Suppress("UNCHECKED_CAST")
                 override fun <T : ViewModel> create(modelClass: Class<T>): T =
                     ConversationViewModel(
                         chat, tokens, baseUrl, myUserId, conversationId,
-                        recipient, onAuthExpired, onConversationOpened
+                        recipient, onAuthExpired, onConversationOpened, tokenRefresher
                     ) as T
             }
     }

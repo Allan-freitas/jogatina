@@ -1,5 +1,6 @@
 package br.com.jogatina.ui.welcome
 
+import android.content.Context
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
@@ -9,7 +10,6 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -32,6 +32,7 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -41,6 +42,7 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.drawscope.rotate
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.PasswordVisualTransformation
@@ -49,8 +51,12 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
+import androidx.credentials.CredentialManager
+import androidx.credentials.GetCredentialRequest
+import androidx.credentials.exceptions.GetCredentialException
+import androidx.credentials.exceptions.NoCredentialException
 import br.com.jogatina.R
-import br.com.jogatina.ui.theme.JogatinaDiscordRed
+import br.com.jogatina.data.auth.AuthRepository
 import br.com.jogatina.ui.theme.JogatinaMagenta
 import br.com.jogatina.ui.theme.JogatinaMagentaGlow
 import br.com.jogatina.ui.theme.JogatinaNavyBottom
@@ -60,6 +66,10 @@ import br.com.jogatina.ui.theme.JogatinaSubtitle
 import br.com.jogatina.ui.theme.JogatinaTheme
 import br.com.jogatina.ui.theme.JogatinaWhite
 import br.com.jogatina.ui.theme.JogatinaWhite70
+import com.google.android.libraries.identity.googleid.GetGoogleIdOption
+import com.google.android.libraries.identity.googleid.GoogleIdTokenCredential
+import com.google.android.libraries.identity.googleid.GoogleIdTokenParsingException
+import kotlinx.coroutines.launch
 
 /**
  * Tela de boas-vindas — segue o mockup:
@@ -68,7 +78,7 @@ import br.com.jogatina.ui.theme.JogatinaWhite70
  * - Lutador grande centralizado (drawable/fighter_pixel.png, sem fundo).
  * - Título "Conecte-se e organize suas jogatinas" (branco, negrito).
  * - Subtítulo "Crie grupos para jogar seus games favoritos com seus amigos".
- * - Botão vermelho dividido: ícone Discord + "Entrar com Discord".
+ * - Botão branco "Entrar com Google" (Credential Manager + ID token -> POST auth/social).
  */
 @Composable
 fun WelcomeScreen(
@@ -76,12 +86,20 @@ fun WelcomeScreen(
     modifier: Modifier = Modifier
 ) {
     val state by viewModel.state.collectAsState()
+    val context = LocalContext.current
+    val scope = rememberCoroutineScope()
+
     WelcomeContent(
         loading = state.loading,
         error = state.error,
         emailMode = state.emailMode,
         showEmailForm = state.showEmailForm,
-        onDiscordEnter = viewModel::onDiscordEnter,
+        onGoogleEnter = {
+            viewModel.clearError()
+            scope.launch {
+                signInWithGoogle(context, viewModel)
+            }
+        },
         onShowEmail = viewModel::showEmailForm,
         onDismissEmail = viewModel::dismissEmailForm,
         onClearError = viewModel::clearError,
@@ -91,13 +109,50 @@ fun WelcomeScreen(
     )
 }
 
+/**
+ * Fluxo Google: Credential Manager -> Google ID token -> backend (auth/social, provider="google").
+ */
+private suspend fun signInWithGoogle(context: Context, viewModel: WelcomeViewModel) {
+    val serverClientId = AuthRepository.GOOGLE_SERVER_CLIENT_ID
+    if (serverClientId.startsWith("SEU_")) {
+        viewModel.onSocialError("Configure o GOOGLE_SERVER_CLIENT_ID para ativar o login Google.")
+        return
+    }
+    try {
+        val googleIdOption = GetGoogleIdOption.Builder()
+            .setFilterByAuthorizedAccounts(false)
+            .setServerClientId(serverClientId)
+            .build()
+        val request = GetCredentialRequest.Builder()
+            .addCredentialOption(googleIdOption)
+            .build()
+        val credentialManager = CredentialManager.create(context)
+        val result = credentialManager.getCredential(context, request)
+        val googleCredential = GoogleIdTokenCredential.createFrom(result.credential.data)
+        val idToken = googleCredential.idToken
+        if (idToken.isBlank()) {
+            viewModel.onSocialError("Não foi possível obter o token do Google.")
+        } else {
+            viewModel.socialLoginGoogle(idToken)
+        }
+    } catch (e: GoogleIdTokenParsingException) {
+        viewModel.onSocialError("Resposta inválida do Google. Tente de novo.")
+    } catch (e: NoCredentialException) {
+        viewModel.onSocialError("Nenhuma conta Google encontrada neste aparelho.")
+    } catch (e: GetCredentialException) {
+        viewModel.onSocialError("Login com Google cancelado ou indisponível.")
+    } catch (e: Exception) {
+        viewModel.onSocialError("Falha no login com Google: ${e.message}")
+    }
+}
+
 @Composable
 fun WelcomeContent(
     loading: Boolean,
     error: String?,
     emailMode: EmailMode,
     showEmailForm: Boolean,
-    onDiscordEnter: () -> Unit,
+    onGoogleEnter: () -> Unit,
     onShowEmail: (EmailMode) -> Unit,
     onDismissEmail: () -> Unit,
     onClearError: () -> Unit,
@@ -173,9 +228,9 @@ fun WelcomeContent(
                     modifier = Modifier.padding(bottom = 12.dp)
                 )
             }
-            DiscordEnterButton(
+            GoogleEnterButton(
                 loading = loading,
-                onClick = { onClearError(); onDiscordEnter() }
+                onClick = { onClearError(); onGoogleEnter() }
             )
             Row(
                 horizontalArrangement = Arrangement.Center,
@@ -204,9 +259,9 @@ fun WelcomeContent(
     }
 }
 
-/** Botão vermelho dividido do mockup: segmento do ícone + "Entrar com Discord". */
+/** Botão branco padrão Google: logo "G" colorido + "Entrar com Google". */
 @Composable
-private fun DiscordEnterButton(
+private fun GoogleEnterButton(
     loading: Boolean,
     onClick: () -> Unit,
     modifier: Modifier = Modifier
@@ -220,56 +275,36 @@ private fun DiscordEnterButton(
             .height(52.dp),
         shape = shape,
         colors = ButtonDefaults.buttonColors(
-            containerColor = JogatinaDiscordRed,
-            contentColor = JogatinaWhite,
-            disabledContainerColor = JogatinaDiscordRed.copy(alpha = 0.6f)
+            containerColor = JogatinaWhite,
+            contentColor = Color(0xFF1F1F1F),
+            disabledContainerColor = JogatinaWhite.copy(alpha = 0.6f)
         ),
-        contentPadding = PaddingValues(0.dp)
+        contentPadding = PaddingValues(horizontal = 16.dp)
     ) {
         if (loading) {
             CircularProgressIndicator(
-                color = JogatinaWhite,
+                color = JogatinaMagenta,
                 strokeWidth = 2.dp,
                 modifier = Modifier.size(22.dp)
             )
         } else {
             Row(
-                modifier = Modifier.fillMaxSize(),
-                verticalAlignment = Alignment.CenterVertically
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.Center
             ) {
-                Box(
-                    modifier = Modifier
-                        .width(54.dp)
-                        .fillMaxHeight()
-                        .clip(RoundedCornerShape(topStart = 10.dp, bottomStart = 10.dp))
-                        .background(Color.Black.copy(alpha = 0.18f)),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Icon(
-                        painter = painterResource(R.drawable.ic_discord),
-                        contentDescription = "Discord",
-                        modifier = Modifier.size(26.dp),
-                        tint = JogatinaWhite
-                    )
-                }
-                Box(
-                    modifier = Modifier
-                        .width(1.dp)
-                        .fillMaxHeight(0.6f)
-                        .background(JogatinaWhite.copy(alpha = 0.35f))
+                Icon(
+                    painter = painterResource(R.drawable.ic_google),
+                    contentDescription = "Google",
+                    modifier = Modifier.size(22.dp),
+                    tint = Color.Unspecified
                 )
-                Box(
-                    modifier = Modifier
-                        .weight(1f)
-                        .fillMaxHeight(),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Text(
-                        text = "Entrar com Discord",
-                        fontSize = 15.sp,
-                        fontWeight = FontWeight.SemiBold
-                    )
-                }
+                Spacer(modifier = Modifier.width(12.dp))
+                Text(
+                    text = "Entrar com Google",
+                    fontSize = 15.sp,
+                    fontWeight = FontWeight.SemiBold,
+                    color = Color(0xFF1F1F1F)
+                )
             }
         }
     }
@@ -431,7 +466,7 @@ private fun WelcomePreview() {
             error = null,
             emailMode = EmailMode.LOGIN,
             showEmailForm = false,
-            onDiscordEnter = {},
+            onGoogleEnter = {},
             onShowEmail = {},
             onDismissEmail = {},
             onClearError = {},

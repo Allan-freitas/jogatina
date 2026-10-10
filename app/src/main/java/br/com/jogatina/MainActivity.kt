@@ -25,6 +25,7 @@ import androidx.compose.ui.tooling.preview.PreviewScreenSizes
 import androidx.lifecycle.viewmodel.compose.viewModel
 import br.com.jogatina.data.api.ApiClient
 import br.com.jogatina.data.auth.AuthRepository
+import br.com.jogatina.data.auth.AuthResult
 import br.com.jogatina.data.auth.TokenStore
 import br.com.jogatina.data.feed.FeedRepository
 import br.com.jogatina.ui.feed.FeedScreen
@@ -120,6 +121,21 @@ class MainActivity : ComponentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        // Sessão com renovação automática: 401 -> POST auth/refresh-token -> retry.
+        // O AuthRepository usa um ApiClient interno próprio (sem hooks), sem risco de loop.
+        apiClient.tokenProvider = { tokenStore.accessToken }
+        apiClient.tokenRefresher = {
+            val currentRefresh = tokenStore.refreshToken
+            if (currentRefresh.isNullOrBlank()) {
+                null
+            } else when (val r = authRepository.refresh(currentRefresh)) {
+                is AuthResult.Success -> {
+                    tokenStore.save(r.value)
+                    r.value.accessToken
+                }
+                is AuthResult.Error -> null
+            }
+        }
         enableEdgeToEdge()
         setContent {
             JogatinaTheme {
@@ -136,6 +152,7 @@ class MainActivity : ComponentActivity() {
                         chatRepository = chatRepository,
                         tokenStore = tokenStore,
                         apiBaseUrl = AuthRepository.DEFAULT_BASE_URL,
+                        tokenRefresher = { apiClient.tokenRefresher?.invoke() },
                         onLogout = { welcomeViewModel.logout() }
                     )
                 } else {
@@ -159,6 +176,7 @@ fun JogatinaApp(
     chatRepository: ChatRepository? = null,
     tokenStore: TokenStore? = null,
     apiBaseUrl: String = "",
+    tokenRefresher: (suspend () -> String?)? = null,
     onLogout: () -> Unit = {}
 ) {
     var currentDestination by rememberSaveable { mutableStateOf(AppDestinations.HOME) }
@@ -202,7 +220,8 @@ fun JogatinaApp(
                             conversationId = openConversationId,
                             recipient = newChatFriend,
                             onAuthExpired = onLogout,
-                            onConversationOpened = { id -> openConversationId = id }
+                            onConversationOpened = { id -> openConversationId = id },
+                            tokenRefresher = tokenRefresher
                         )
                     )
                     val title = openConversationId?.let { id ->

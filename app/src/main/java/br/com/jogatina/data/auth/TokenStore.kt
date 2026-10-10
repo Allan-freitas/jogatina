@@ -27,6 +27,7 @@ class TokenStore(context: Context) {
     }
 
     val accessToken: String? get() = prefs.getString(KEY_ACCESS, null)
+    val refreshToken: String? get() = prefs.getString(KEY_REFRESH, null)
     val isLoggedIn: Boolean get() = !accessToken.isNullOrBlank()
 
     /**

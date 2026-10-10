@@ -22,15 +22,25 @@ sealed interface ChatEvent {
     data class Error(val code: String, val message: String) : ChatEvent
     data object Connected : ChatEvent
     data class Disconnected(val reason: String) : ChatEvent
+    /** Handshake rejeitado por token inválido/expirado, mesmo após tentar renovar. */
+    data object AuthExpired : ChatEvent
 }
 
 /**
  * WebSocket do chat (OkHttp). Autentica via ?access_token=.
  * Um socket por usuário; mensagens de qualquer conversa chegam nele.
+ *
+ * O token é lido de [tokenProvider] a cada (re)conexão, então uma renovação
+ * do access token via REST é adotada automaticamente no próximo handshake.
+ * Se o handshake falhar com 401, tenta UMA renovação via [tokenRefresher] e
+ * reconecta; se continuar 401 (ou sem refresh possível), emite
+ * [ChatEvent.AuthExpired] e para de tentar — espelhando o logout do REST.
  */
 class ChatSocket(
     private val baseUrl: String,
-    private val scope: CoroutineScope
+    private val scope: CoroutineScope,
+    private val tokenProvider: () -> String?,
+    private val tokenRefresher: (suspend () -> String?)? = null
 ) {
     private val _events = MutableSharedFlow<ChatEvent>(extraBufferCapacity = 64)
     val events: SharedFlow<ChatEvent> = _events.asSharedFlow()
@@ -38,13 +48,15 @@ class ChatSocket(
     private var socket: WebSocket? = null
     private var pingJob: Job? = null
     private var wantConnection = false
-    private var token: String? = null
+    /** Token usado no handshake em curso/mais recente (para detectar 401 repetido). */
+    private var activeToken: String? = null
+    private var lastAuthRetryToken: String? = null
 
     val isConnected: Boolean get() = socket != null
 
-    fun connect(accessToken: String) {
-        token = accessToken
+    fun connect() {
         wantConnection = true
+        lastAuthRetryToken = null
         open()
     }
 
@@ -84,7 +96,8 @@ class ChatSocket(
     }
 
     private fun open() {
-        val t = token ?: return
+        val t = tokenProvider() ?: return
+        activeToken = t
         disconnectSocketOnly()
         val url = baseUrl.trimEnd('/')
             .replace("https://", "wss://")
@@ -118,6 +131,7 @@ class ChatSocket(
 
     private inner class Listener : WebSocketListener() {
         override fun onOpen(webSocket: WebSocket, response: Response) {
+            lastAuthRetryToken = null
             scope.launch { _events.emit(ChatEvent.Connected) }
         }
 
@@ -145,7 +159,41 @@ class ChatSocket(
         override fun onFailure(webSocket: WebSocket, t: Throwable, response: Response?) {
             Log.e(TAG, "ws failure: ${t.message} (http=${response?.code})")
             socket = null
-            scope.launch { _events.emit(ChatEvent.Disconnected(t.message ?: "falha")) }
+            if (response?.code == 401 && wantConnection) {
+                onHandshakeUnauthorized()
+            } else {
+                scope.launch { _events.emit(ChatEvent.Disconnected(t.message ?: "falha")) }
+            }
+        }
+
+        /**
+         * Handshake rejeitado: tenta renovar a sessão uma vez e reconecta com o
+         * token fresco. Se o token que falhou já era fruto de uma tentativa de
+         * renovação (ou não há como renovar), desiste e avisa expiração — o
+         * ViewModel então desloga, como no REST.
+         */
+        private fun onHandshakeUnauthorized() {
+            val failed = activeToken
+            if (failed != null && failed == lastAuthRetryToken) {
+                wantConnection = false
+                scope.launch { _events.emit(ChatEvent.AuthExpired) }
+                return
+            }
+            lastAuthRetryToken = failed
+            scope.launch {
+                val fresh = try {
+                    tokenRefresher?.invoke()
+                } catch (e: Exception) {
+                    Log.e(TAG, "ws refresh falhou: ${e.message}")
+                    null
+                }
+                if (!fresh.isNullOrBlank() && wantConnection) {
+                    open()
+                } else if (wantConnection) {
+                    wantConnection = false
+                    _events.emit(ChatEvent.AuthExpired)
+                }
+            }
         }
 
         override fun onClosed(webSocket: WebSocket, code: Int, reason: String) {

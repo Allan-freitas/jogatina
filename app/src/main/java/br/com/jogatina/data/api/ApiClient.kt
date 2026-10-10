@@ -4,6 +4,8 @@ import android.util.Log
 import br.com.jogatina.data.auth.AuthResult
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
 import org.json.JSONObject
 import java.io.IOException
@@ -17,26 +19,36 @@ import java.net.URL
  * Resiliência a cold start (a API "dorme" sem tráfego): leitura com timeout
  * de 30 s + UMA nova tentativa automática em falha de rede (timeout, DNS,
  * conexão recusada). Erros HTTP (4xx/5xx) não repetem.
+ *
+ * Renovação de sessão: quando [tokenProvider]/[tokenRefresher] estão configurados
+ * (ver MainActivity), um 401 com token anexado tenta UM refresh e repete a
+ * chamada uma vez com o novo access token. Falhas de refresh mantêm o 401
+ * original, e o fluxo existente de logout (onAuthExpired) continua valendo.
  */
-class ApiClient(val baseUrl: String) {
+class ApiClient(
+    val baseUrl: String,
+    var tokenProvider: (() -> String?)? = null,
+    var tokenRefresher: (suspend () -> String?)? = null
+) {
+    private val refreshMutex = Mutex()
 
     suspend fun get(path: String, token: String? = null): AuthResult<String> =
-        withRetry { request("GET", path, null, token) }
+        withAuth(token) { t -> withRetry { request("GET", path, null, t) } }
 
     suspend fun post(path: String, body: JSONObject, token: String? = null): AuthResult<String> =
-        withRetry { request("POST", path, body.toString().toByteArray(), token) }
+        withAuth(token) { t -> withRetry { request("POST", path, body.toString().toByteArray(), t) } }
 
     suspend fun put(path: String, body: JSONObject, token: String? = null): AuthResult<String> =
-        withRetry { request("PUT", path, body.toString().toByteArray(), token) }
+        withAuth(token) { t -> withRetry { request("PUT", path, body.toString().toByteArray(), t) } }
 
     suspend fun postEmpty(path: String, token: String? = null): AuthResult<String> =
-        withRetry { request("POST", path, null, token) }
+        withAuth(token) { t -> withRetry { request("POST", path, null, t) } }
 
     suspend fun patchEmpty(path: String, token: String? = null): AuthResult<String> =
-        withRetry { request("PATCH", path, null, token) }
+        withAuth(token) { t -> withRetry { request("PATCH", path, null, t) } }
 
     suspend fun delete(path: String, token: String? = null): AuthResult<String> =
-        withRetry { request("DELETE", path, null, token) }
+        withAuth(token) { t -> withRetry { request("DELETE", path, null, t) } }
 
     suspend fun upload(
         path: String,
@@ -45,7 +57,50 @@ class ApiClient(val baseUrl: String) {
         mimeType: String,
         token: String? = null,
         method: String = "POST"
-    ): AuthResult<String> = withRetry { uploadOnce(path, bytes, fileName, mimeType, token, method) }
+    ): AuthResult<String> = withAuth(token) { t ->
+        withRetry { uploadOnce(path, bytes, fileName, mimeType, t, method) }
+    }
+
+    /**
+     * Executa a chamada; em 401 com Bearer anexado, tenta renovar a sessão
+     * uma vez e repete a chamada com o novo token.
+     */
+    private suspend fun withAuth(
+        token: String?,
+        call: suspend (String?) -> AuthResult<String>
+    ): AuthResult<String> {
+        val first = call(token)
+        if (first is AuthResult.Error && first.statusCode == 401 && !token.isNullOrBlank()) {
+            val fresh = refreshAccessToken(token)
+            if (!fresh.isNullOrBlank() && fresh != token) {
+                return call(fresh)
+            }
+        }
+        return first
+    }
+
+    /**
+     * Renova o access token via [tokenRefresher], com Mutex para que N
+     * chamadas 401 simultâneas disparem UM único refresh. Se outra coroutine
+     * já renovou enquanto esta esperava, reaproveita o token atual.
+     */
+    private suspend fun refreshAccessToken(failedToken: String): String? {
+        val refresher = tokenRefresher ?: return null
+        return refreshMutex.withLock {
+            val current = try {
+                tokenProvider?.invoke()
+            } catch (_: Exception) {
+                null
+            }
+            if (!current.isNullOrBlank() && current != failedToken) return current
+            try {
+                refresher()
+            } catch (e: Exception) {
+                Log.e(TAG, "refresh falhou: ${e.javaClass.simpleName}: ${e.message}")
+                null
+            }
+        }
+    }
 
     /**
      * Executa em IO com uma nova tentativa em caso de falha de rede.

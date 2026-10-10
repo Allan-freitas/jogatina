@@ -41,17 +41,15 @@ class WelcomeViewModel(
         _state.value = _state.value.copy(error = null)
     }
 
-    /** Botão principal "Entrar" (Discord). Sem OAuth nativo ainda: abre o form de e-mail. */
-    fun onDiscordEnter() {
-        // Quando o OAuth Discord estiver plugado, chame socialLogin(token) aqui.
-        showEmailForm(EmailMode.LOGIN)
+    fun onSocialError(message: String) {
+        _state.value = _state.value.copy(loading = false, error = message)
     }
 
-    fun socialLogin(discordToken: String) {
+    fun socialLoginGoogle(idToken: String) {
         if (_state.value.loading) return
         _state.value = _state.value.copy(loading = true, error = null)
         viewModelScope.launch {
-            when (val r = auth.socialLoginDiscord(discordToken)) {
+            when (val r = auth.socialLoginGoogle(idToken)) {
                 is AuthResult.Success -> {
                     tokens.save(r.value)
                     _state.value = _state.value.copy(loading = false, loggedIn = true)
