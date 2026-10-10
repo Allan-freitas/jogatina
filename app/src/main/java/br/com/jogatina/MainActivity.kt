@@ -168,7 +168,11 @@ fun JogatinaApp(
                 currentDestination == AppDestinations.FAVORITES && libraryViewModel != null -> {
                     LibraryScreen(
                         viewModel = libraryViewModel,
-                        onSearchCatalog = { showCatalog = true },
+                        onSearchCatalog = {
+                            // Recarrega para exibir capas recém-enviadas e novos jogos.
+                            catalogViewModel?.retry()
+                            showCatalog = true
+                        },
                         modifier = Modifier.padding(innerPadding)
                     )
                 }
