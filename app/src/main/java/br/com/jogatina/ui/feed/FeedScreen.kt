@@ -511,6 +511,7 @@ private fun PostCard(
                         placeholder = { Text("Comentar...", color = JogatinaWhite70, fontSize = 13.sp) },
                         modifier = Modifier.weight(1f),
                         singleLine = true,
+                        shape = RoundedCornerShape(24.dp),
                         colors = OutlinedTextFieldDefaults.colors(
                             focusedTextColor = JogatinaWhite,
                             unfocusedTextColor = JogatinaWhite,

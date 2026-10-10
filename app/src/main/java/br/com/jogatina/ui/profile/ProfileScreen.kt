@@ -207,14 +207,16 @@ fun ProfileAvatar(
     size: androidx.compose.ui.unit.Dp,
     showBorder: Boolean = true
 ) {
+    // Borda branca fina somente quando há foto de verdade.
+    val withRing = showBorder && photoUrl != null
     Box(
         modifier = Modifier
             .size(size)
             .background(
-                if (showBorder) JogatinaWhite else androidx.compose.ui.graphics.Color.Transparent,
+                if (withRing) JogatinaWhite else androidx.compose.ui.graphics.Color.Transparent,
                 CircleShape
             )
-            .padding(if (showBorder) 3.dp else 0.dp),
+            .padding(if (withRing) 2.dp else 0.dp),
         contentAlignment = Alignment.Center
     ) {
         if (photoUrl != null) {
