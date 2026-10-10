@@ -354,8 +354,7 @@ private fun PostCard(
                 ProfileAvatar(
                     photoUrl = resolvePhoto(post.authorPhotoUrl),
                     name = post.authorName,
-                    size = 40.dp,
-                    showBorder = false
+                    size = 40.dp
                 )
                 Spacer(modifier = Modifier.width(10.dp))
                 Column(modifier = Modifier.weight(1f)) {
@@ -376,22 +375,14 @@ private fun PostCard(
 
             if (imageUrl != null) {
                 Spacer(modifier = Modifier.height(8.dp))
-                Box(
+                AsyncImage(
+                    model = imageUrl,
+                    contentDescription = "Imagem do post",
                     modifier = Modifier
                         .fillMaxWidth()
-                        .clip(RoundedCornerShape(12.dp))
-                        .background(JogatinaWhite)
-                        .padding(3.dp)
-                ) {
-                    AsyncImage(
-                        model = imageUrl,
-                        contentDescription = "Imagem do post",
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .clip(RoundedCornerShape(9.dp)),
-                        contentScale = ContentScale.FillWidth
-                    )
-                }
+                        .clip(RoundedCornerShape(12.dp)),
+                    contentScale = ContentScale.FillWidth
+                )
             }
 
             Spacer(modifier = Modifier.height(4.dp))
@@ -553,7 +544,7 @@ private fun CommentRow(
             .fillMaxWidth()
             .padding(start = if (indent) 40.dp else 0.dp, top = 6.dp)
     ) {
-        ProfileAvatar(photoUrl = photoUrl, name = comment.authorName, size = 30.dp, showBorder = false)
+        ProfileAvatar(photoUrl = photoUrl, name = comment.authorName, size = 30.dp)
         Spacer(modifier = Modifier.width(8.dp))
         Column(
             modifier = Modifier
