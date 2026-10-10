@@ -15,10 +15,11 @@ class UserRepository(
     suspend fun getMyProfile(): AuthResult<UserProfile> =
         api.get("users/me", token()).map(::parseProfile)
 
-    suspend fun updateProfile(birthDateIso: String?, hobbies: String?): AuthResult<UserProfile> {
+    suspend fun updateProfile(birthDateIso: String?, hobbies: String?, country: String?): AuthResult<UserProfile> {
         val body = JSONObject()
         if (birthDateIso != null) body.put("birthDate", birthDateIso) else body.put("birthDate", JSONObject.NULL)
         if (hobbies != null) body.put("hobbies", hobbies) else body.put("hobbies", JSONObject.NULL)
+        if (country != null) body.put("country", country) else body.put("country", JSONObject.NULL)
         return api.put("users/me", body, token()).map(::parseProfile)
     }
 
@@ -43,7 +44,8 @@ class UserRepository(
             lastName = o.optString("lastName"),
             photoUrl = o.optString("photoUrl").ifBlank { null },
             birthDate = o.optString("birthDate").ifBlank { null },
-            hobbies = o.optString("hobbies").ifBlank { null }
+            hobbies = o.optString("hobbies").ifBlank { null },
+            country = o.optString("country").ifBlank { null }
         )
     }
 }

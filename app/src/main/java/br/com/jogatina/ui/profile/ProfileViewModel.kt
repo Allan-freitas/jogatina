@@ -54,9 +54,9 @@ class ProfileViewModel(
     }
 
     /**
-     * Salva foto (se trocada) + nascimento/hobbies. Null = manter atual.
+     * Salva foto (se trocada) + nascimento/hobbies/país. Null = manter atual.
      */
-    fun save(birthDateIso: String?, hobbies: String?, photo: PickedPhoto?) {
+    fun save(birthDateIso: String?, hobbies: String?, country: String?, photo: PickedPhoto?) {
         if (_state.value.saving) return
         _state.value = _state.value.copy(saving = true, error = null)
         viewModelScope.launch {
@@ -70,7 +70,7 @@ class ProfileViewModel(
                     }
                 }
             }
-            when (val r = users.updateProfile(birthDateIso, hobbies)) {
+            when (val r = users.updateProfile(birthDateIso, hobbies, country)) {
                 is AuthResult.Success ->
                     _state.value = _state.value.copy(
                         profile = r.value,

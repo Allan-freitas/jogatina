@@ -5,24 +5,29 @@ import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Cake
 import androidx.compose.material.icons.filled.CameraAlt
+import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Interests
+import androidx.compose.material.icons.filled.Place
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
@@ -31,7 +36,11 @@ import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.DatePicker
 import androidx.compose.material3.DatePickerDialog
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.ExposedDropdownMenuBox
+import androidx.compose.material3.ExposedDropdownMenuDefaults
+import androidx.compose.material3.ExposedDropdownMenuAnchorType
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.OutlinedTextField
@@ -155,6 +164,13 @@ fun ProfileScreen(
                                 label = "Hobbies",
                                 value = profile.hobbies?.ifBlank { null } ?: "Não informado"
                             )
+                            InfoRow(
+                                icon = Icons.Filled.Place,
+                                label = "País",
+                                value = profile.country?.let { code ->
+                                    "${Country(code, countryName(code) ?: code).flagEmoji()} ${countryName(code) ?: code}"
+                                } ?: "Não informado"
+                            )
                         }
                     }
                     Spacer(modifier = Modifier.height(16.dp))
@@ -179,8 +195,8 @@ fun ProfileScreen(
                 viewModel = viewModel,
                 profile = profile,
                 saving = state.saving,
-                onSave = { birthIso, hobbies, photo ->
-                    viewModel.save(birthIso, hobbies, photo)
+                onSave = { birthIso, hobbies, country, photo ->
+                    viewModel.save(birthIso, hobbies, country, photo)
                 },
                 onDismiss = { editing = false }
             )
@@ -252,11 +268,12 @@ private fun EditProfileDialog(
     viewModel: ProfileViewModel,
     profile: UserProfile,
     saving: Boolean,
-    onSave: (birthIso: String?, hobbies: String?, photo: PickedPhoto?) -> Unit,
+    onSave: (birthIso: String?, hobbies: String?, country: String?, photo: PickedPhoto?) -> Unit,
     onDismiss: () -> Unit
 ) {
     var hobbies by remember { mutableStateOf(profile.hobbies.orEmpty()) }
     var birthIso by remember { mutableStateOf(profile.birthDate) }
+    var countryCode by remember { mutableStateOf(profile.country) }
     var photoBytes by remember { mutableStateOf<ByteArray?>(null) }
     var photoMime by remember { mutableStateOf("image/jpeg") }
     var photoUri by remember { mutableStateOf<Uri?>(null) }
@@ -331,6 +348,11 @@ private fun EditProfileDialog(
                 maxLines = 3,
                 colors = profileFieldColors()
             )
+            Spacer(modifier = Modifier.height(8.dp))
+            CountryDropdown(
+                selectedCode = countryCode,
+                onSelect = { countryCode = it }
+            )
             Spacer(modifier = Modifier.height(16.dp))
             Row(horizontalArrangement = Arrangement.End, modifier = Modifier.fillMaxWidth()) {
                 TextButton(onClick = onDismiss, enabled = !saving) {
@@ -339,7 +361,7 @@ private fun EditProfileDialog(
                 Button(
                     onClick = {
                         val photo = photoBytes?.let { PickedPhoto(it, photoMime, photoUri!!) }
-                        onSave(birthIso, hobbies.ifBlank { null }, photo)
+                        onSave(birthIso, hobbies.ifBlank { null }, countryCode, photo)
                     },
                     enabled = !saving,
                     shape = RoundedCornerShape(10.dp),
@@ -393,6 +415,95 @@ private fun String.toEpochMillis(): Long? = try {
         .atStartOfDay(ZoneOffset.UTC).toInstant().toEpochMilli()
 } catch (_: Exception) {
     null
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun CountryDropdown(
+    selectedCode: String?,
+    onSelect: (String?) -> Unit
+) {
+    var expanded by remember { mutableStateOf(false) }
+    var filter by remember { mutableStateOf("") }
+    val selected = selectedCode?.let { code ->
+        Countries.firstOrNull { it.code.equals(code, ignoreCase = true) }
+    }
+    val visible = remember(filter) {
+        if (filter.isBlank()) Countries
+        else Countries.filter { it.name.contains(filter, ignoreCase = true) }
+    }
+
+    ExposedDropdownMenuBox(
+        expanded = expanded,
+        onExpandedChange = { expanded = it }
+    ) {
+        OutlinedTextField(
+            value = selected?.let { "${it.flagEmoji()}  ${it.name}" } ?: "",
+            onValueChange = {},
+            readOnly = true,
+            label = { Text("País", color = JogatinaWhite70, fontSize = 13.sp) },
+            placeholder = { Text("Selecionar país", color = JogatinaWhite70, fontSize = 14.sp) },
+            leadingIcon = selected?.let {
+                { Text(it.flagEmoji(), fontSize = 20.sp) }
+            },
+            trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded) },
+            modifier = Modifier
+                .fillMaxWidth()
+                .menuAnchor(ExposedDropdownMenuAnchorType.PrimaryNotEditable),
+            colors = profileFieldColors()
+        )
+        ExposedDropdownMenu(
+            expanded = expanded,
+            onDismissRequest = { expanded = false },
+            modifier = Modifier
+                .background(JogatinaNavyMid)
+                .heightIn(max = 320.dp)
+        ) {
+            OutlinedTextField(
+                value = filter,
+                onValueChange = { filter = it },
+                placeholder = { Text("Buscar país...", color = JogatinaWhite70, fontSize = 13.sp) },
+                singleLine = true,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 8.dp, vertical = 4.dp),
+                colors = profileFieldColors()
+            )
+            DropdownMenuItem(
+                text = { Text("Sem país", color = JogatinaWhite70, fontSize = 14.sp) },
+                onClick = { onSelect(null); expanded = false }
+            )
+            Column(
+                modifier = Modifier
+                    .heightIn(max = 220.dp)
+                    .verticalScroll(rememberScrollState())
+            ) {
+                visible.take(249).forEach { country ->
+                    DropdownMenuItem(
+                        text = {
+                            Text(
+                                "${country.flagEmoji()}  ${country.name}",
+                                color = JogatinaWhite,
+                                fontSize = 14.sp
+                            )
+                        },
+                        trailingIcon = if (selected?.code == country.code) {
+                            {
+                                Icon(
+                                    Icons.Filled.Check,
+                                    contentDescription = null,
+                                    tint = JogatinaMagenta,
+                                    modifier = Modifier.size(18.dp)
+                                )
+                            }
+                        } else null,
+                        onClick = { onSelect(country.code); expanded = false },
+                        contentPadding = PaddingValues(horizontal = 12.dp, vertical = 2.dp)
+                    )
+                }
+            }
+        }
+    }
 }
 
 @Composable

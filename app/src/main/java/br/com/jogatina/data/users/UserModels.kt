@@ -12,7 +12,9 @@ data class UserProfile(
     val photoUrl: String? = null,
     /** ISO yyyy-MM-dd ou null. */
     val birthDate: String? = null,
-    val hobbies: String? = null
+    val hobbies: String? = null,
+    /** ISO alpha-2 (ex.: "BR") ou null. */
+    val country: String? = null
 ) {
     val displayName: String
         get() = firstName.ifBlank { email.substringBefore("@") }.ifBlank { "Jogador" }
