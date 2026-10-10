@@ -38,6 +38,8 @@ import br.com.jogatina.ui.games.LibraryViewModel
 import br.com.jogatina.data.notifications.NotificationsRepository
 import br.com.jogatina.ui.notifications.NotificationsScreen
 import br.com.jogatina.ui.notifications.NotificationsViewModel
+import br.com.jogatina.ui.social.FriendsScreen
+import br.com.jogatina.ui.social.FriendsViewModel
 import br.com.jogatina.data.chat.ChatRepository
 import br.com.jogatina.data.social.FriendDto
 import br.com.jogatina.data.social.FriendsRepository
@@ -97,6 +99,11 @@ class MainActivity : ComponentActivity() {
             welcomeViewModel.logout()
         }
     }
+    private val friendsViewModel: FriendsViewModel by viewModels {
+        FriendsViewModel.factory(friendsRepository) {
+            welcomeViewModel.logout()
+        }
+    }
     private val profileViewModel: ProfileViewModel by viewModels {
         ProfileViewModel.factory(userRepository) {
             welcomeViewModel.logout()
@@ -125,6 +132,7 @@ class MainActivity : ComponentActivity() {
                         notificationsViewModel = notificationsViewModel,
                         profileViewModel = profileViewModel,
                         chatListViewModel = chatListViewModel,
+                        friendsViewModel = friendsViewModel,
                         chatRepository = chatRepository,
                         tokenStore = tokenStore,
                         apiBaseUrl = AuthRepository.DEFAULT_BASE_URL,
@@ -147,6 +155,7 @@ fun JogatinaApp(
     notificationsViewModel: NotificationsViewModel? = null,
     profileViewModel: ProfileViewModel? = null,
     chatListViewModel: ChatListViewModel? = null,
+    friendsViewModel: FriendsViewModel? = null,
     chatRepository: ChatRepository? = null,
     tokenStore: TokenStore? = null,
     apiBaseUrl: String = "",
@@ -156,6 +165,7 @@ fun JogatinaApp(
     var showCatalog by rememberSaveable { mutableStateOf(false) }
     var showNotifications by rememberSaveable { mutableStateOf(false) }
     var showChatList by rememberSaveable { mutableStateOf(false) }
+    var showFriends by rememberSaveable { mutableStateOf(false) }
     var openConversationId by rememberSaveable { mutableStateOf<String?>(null) }
     var newChatFriend by remember { mutableStateOf<FriendDto?>(null) }
     val notificationsState = notificationsViewModel?.state?.collectAsState()?.value
@@ -236,6 +246,18 @@ fun JogatinaApp(
                         modifier = Modifier.padding(innerPadding)
                     )
                 }
+                showFriends && friendsViewModel != null -> {
+                    FriendsScreen(
+                        viewModel = friendsViewModel,
+                        onChatWith = {
+                            showFriends = false
+                            openConversationId = null
+                            newChatFriend = it
+                        },
+                        onBack = { showFriends = false },
+                        modifier = Modifier.padding(innerPadding)
+                    )
+                }
                 currentDestination == AppDestinations.HOME && feedViewModel != null -> {
                     FeedScreen(
                         viewModel = feedViewModel,
@@ -261,6 +283,7 @@ fun JogatinaApp(
                 currentDestination == AppDestinations.PROFILE && profileViewModel != null -> {
                     ProfileScreen(
                         viewModel = profileViewModel,
+                        onFriendsClick = { showFriends = true },
                         modifier = Modifier.padding(innerPadding)
                     )
                 }

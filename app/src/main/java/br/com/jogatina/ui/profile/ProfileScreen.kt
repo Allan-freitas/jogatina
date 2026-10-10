@@ -88,6 +88,7 @@ import java.time.format.DateTimeFormatter
 @Composable
 fun ProfileScreen(
     viewModel: ProfileViewModel,
+    onFriendsClick: () -> Unit = {},
     modifier: Modifier = Modifier
 ) {
     val state by viewModel.state.collectAsState()
@@ -174,15 +175,27 @@ fun ProfileScreen(
                         }
                     }
                     Spacer(modifier = Modifier.height(16.dp))
-                    Button(
-                        onClick = { editing = true },
-                        shape = RoundedCornerShape(12.dp),
-                        colors = ButtonDefaults.buttonColors(
-                            containerColor = JogatinaMagenta,
-                            contentColor = JogatinaWhite
-                        )
-                    ) {
-                        Text("Editar perfil", fontWeight = FontWeight.SemiBold)
+                    Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                        Button(
+                            onClick = { editing = true },
+                            shape = RoundedCornerShape(12.dp),
+                            colors = ButtonDefaults.buttonColors(
+                                containerColor = JogatinaMagenta,
+                                contentColor = JogatinaWhite
+                            )
+                        ) {
+                            Text("Editar perfil", fontWeight = FontWeight.SemiBold)
+                        }
+                        Button(
+                            onClick = onFriendsClick,
+                            shape = RoundedCornerShape(12.dp),
+                            colors = ButtonDefaults.buttonColors(
+                                containerColor = JogatinaWhite.copy(alpha = 0.12f),
+                                contentColor = JogatinaWhite
+                            )
+                        ) {
+                            Text("Amigos", fontWeight = FontWeight.SemiBold)
+                        }
                     }
                 }
             }

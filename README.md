@@ -62,6 +62,10 @@ descobre o id criado e abre o histórico.
 Aba **Profile**: avatar circular com **borda branca** (foto via Coil ou
 inicial), nome, e-mail, data de nascimento e hobbies. Botão **Editar perfil**: troca de foto (galeria),
 seletor de data e campo de hobbies (`PUT users/me` + `POST users/me/photo`).
+Botão **Amigos** → tela **Amigos**: lista (online, conversar, remover),
+**Pedidos** recebidos/enviados (aceitar/recusar) e **Buscar** jogadores por
+nome/e-mail com debounce (`GET users/search`, `GET social/friend-requests`,
+`POST/PUT/DELETE` social).
 
 ## Estrutura
 
@@ -81,6 +85,9 @@ app/src/main/java/br/com/jogatina/
 ├── data/games/
 │   ├── GameModels.kt          # GameDto, MyGameDto, GameStatus
 │   └── GamesRepository.kt     # games + users/me/games com Bearer
+├── data/users/
+│   ├── UserModels.kt          # UserProfile (foto, nascimento, hobbies, país)
+│   └── UserRepository.kt      # users/me, PUT, upload de foto
 ├── data/notifications/
 │   ├── NotificationModels.kt  # NotificationDto
 │   └── NotificationsRepository.kt
@@ -89,7 +96,8 @@ app/src/main/java/br/com/jogatina/
 │   ├── ChatRepository.kt      # REST do chat
 │   └── ChatSocket.kt          # WebSocket (OkHttp): send/read/ping
 ├── data/social/
-│   └── FriendsRepository.kt   # amigos p/ nova conversa
+│   ├── SocialModels.kt        # FriendDto, SearchedUser, PendingRequest
+│   └── FriendsRepository.kt   # amigos, busca, pedidos, responder, remover
 └── ui/
     ├── theme/                 # paleta navy + magenta (dynamicColor off)
     ├── welcome/
@@ -106,12 +114,16 @@ app/src/main/java/br/com/jogatina/
         ├── NotificationsScreen.kt
         └── NotificationsViewModel.kt
     └── profile/
-        ├── ProfileScreen.kt       # foto, nascimento, hobbies + edição
-        └── ProfileViewModel.kt
+        ├── ProfileScreen.kt       # foto, nascimento, hobbies, país + edição
+        ├── ProfileViewModel.kt
+        └── Countries.kt           # 249 países PT + bandeiras emoji
     └── chat/
         ├── ChatScreens.kt         # lista, conversa, nova conversa
         ├── ChatListViewModel.kt
         └── ConversationViewModel.kt
+    └── social/
+        ├── FriendsScreen.kt       # amigos, pedidos, busca
+        └── FriendsViewModel.kt
 ```
 
 ## API
@@ -141,7 +153,12 @@ Base de produção: `https://agfapp.com` (ver `AuthRepository.DEFAULT_BASE_URL`)
 | Conversas         | `GET /chat/conversations` | participantes, última msg, não-lidas |
 | Histórico         | `GET /chat/conversations/{id}/messages` | cronológico, `?page=&pageSize=` |
 | Tempo real        | `WS /ws/chat?access_token=` | frames send/read/ping ↔ message/read_ok/pong/error |
-| Amigos            | `GET /users/me/friends` | base da nova conversa |
+| Amigos            | `GET /users/me/friends` | online/offline |
+| Buscar jogadores  | `GET /users/search` | `?query=&page=&pageSize=` (nome/e-mail, mín. 2 letras) |
+| Pedidos           | `GET /social/friend-requests` | recebidos + enviados |
+| Pedir amizade     | `POST /social/friend-requests` | `{ addresseeId }` → 409 se já houver |
+| Responder         | `PUT /social/friend-requests/{id}` | `{ action: Accept\|Decline }` |
+| Remover amigo     | `DELETE /social/friends/{id}` | 204 |
 | Saúde             | `GET /health`         | status da API + banco |
 | Meu perfil        | `GET /users/me`       | perfil do logado (nome do "Olá") |
 | Editar perfil     | `PUT /users/me`       | `{ birthDate?, hobbies?, country? }` (ISO yyyy-MM-dd, ISO alpha-2) |
@@ -182,6 +199,8 @@ Contratos espelham `CleanArchitecture.slnx`:
   `MarkAsRead.cs`, `MarkAllAsRead.cs` (sem migration — sem mudança de modelo).
 - Chat: `Endpoints/Chat/GetMessages.cs` (histórico) + `Chat/WsChat.cs`
   (tempo real, auth `sub`/`NameIdentifier` + `HttpContext.User` no escopo).
+- Social: `Endpoints/Users/SearchUsers.cs`, `Endpoints/Social/GetPendingRequests.cs`
+  (+ `:guid` em `users/{userId}` para não engolir o `/users/search`).
 - Perfil: `User.PhotoUrl/BirthDate/Hobbies/Country` + migrations
   `Add_UserProfileFields`, `Add_UserCountry`; endpoints `UpdateProfile.cs`
   (`PUT users/me`), `UploadPhoto.cs` (`POST users/me/photo`), `GetMe.cs`.
