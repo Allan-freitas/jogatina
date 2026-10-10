@@ -29,7 +29,6 @@ Após o login o usuário cai no **Feed**, com saudação **"Olá, {nome}"**
 - 401 (token expirado) desloga automaticamente para a welcome.
 
 ## Games (biblioteca + catálogo)
-
 - Aba **Favorites → "Meus Jogos"**: biblioteca (`GET users/me/games`) com
   capa (Coil, fallback com inicial), chip de status (Quero jogar/Jogando/
   Zerado), estrela de favorito, filtro por status e remoção.
@@ -50,13 +49,19 @@ Após o login o usuário cai no **Feed**, com saudação **"Olá, {nome}"**
   lida (`PATCH notifications/{id}/read`), "ler todas"
   (`POST notifications/read-all`), auto-refresh a cada 60 s na tela.
 
+## Perfil
+
+Aba **Profile**: avatar (foto via Coil ou inicial), nome, e-mail, data de
+nascimento e hobbies. Botão **Editar perfil**: troca de foto (galeria),
+seletor de data e campo de hobbies (`PUT users/me` + `POST users/me/photo`).
+
 ## Estrutura
 
 ```
 app/src/main/java/br/com/jogatina/
-├── MainActivity.kt            # fluxo welcome -> feed (via TokenStore)
+├── MainActivity.kt            # fluxo welcome -> feed/biblioteca/perfil
 ├── data/api/
-│   └── ApiClient.kt           # GET/POST/DELETE JSON + multipart (Bearer)
+│   └── ApiClient.kt           # GET/POST/PUT/PATCH/DELETE JSON + multipart (Bearer)
 ├── data/auth/
 │   ├── AuthModels.kt          # contratos das rotas de auth
 │   ├── AuthRepository.kt      # auth via ApiClient
@@ -85,6 +90,9 @@ app/src/main/java/br/com/jogatina/
     └── notifications/
         ├── NotificationsScreen.kt
         └── NotificationsViewModel.kt
+    └── profile/
+        ├── ProfileScreen.kt       # foto, nascimento, hobbies + edição
+        └── ProfileViewModel.kt
 ```
 
 ## API
@@ -113,6 +121,8 @@ Base de produção: `https://agfapp.com` (ver `AuthRepository.DEFAULT_BASE_URL`)
 | Ler todas         | `POST /notifications/read-all` | retorna a quantidade marcada |
 | Saúde             | `GET /health`         | status da API + banco |
 | Meu perfil        | `GET /users/me`       | perfil do logado (nome do "Olá") |
+| Editar perfil     | `PUT /users/me`       | `{ birthDate?, hobbies? }` (ISO yyyy-MM-dd) |
+| Foto de perfil    | `POST /users/me/photo` | multipart `file` (JPEG/PNG/WebP/GIF ≤ 5 MB) |
 
 Erros vêm em `problem+json` (`Users.NotFoundByEmail`, validações, …) e são
 exibidos na própria tela. Para apontar dev/staging, passe outra `baseUrl` ao
@@ -143,6 +153,9 @@ Contratos espelham `CleanArchitecture.slnx`:
   `Add_Feed`, `Add_PostReactionKind`).
 - `src/Web.Api/Endpoints/Notifications/`: `Notifications.cs` (lista),
   `MarkAsRead.cs`, `MarkAllAsRead.cs` (sem migration — sem mudança de modelo).
+- Perfil: `User.PhotoUrl/BirthDate/Hobbies` + migration
+  `Add_UserProfileFields`; endpoints `UpdateProfile.cs` (`PUT users/me`),
+  `UploadPhoto.cs` (`POST users/me/photo`), `GetMe.cs`.
 - Imagens salvas em `wwwroot/uploads` (`IFileStorage`/`LocalFileStorage`,
   servidas via `UseStaticFiles`).
 - Capas dos jogos em `wwwroot/game-covers` (geradas como placeholder neon em

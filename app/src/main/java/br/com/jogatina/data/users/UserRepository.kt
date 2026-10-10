@@ -9,14 +9,41 @@ class UserRepository(
     private val api: ApiClient,
     private val token: () -> String?
 ) {
+    fun photoUrl(relative: String?): String? =
+        relative?.let { api.baseUrl.trimEnd('/') + it }
+
     suspend fun getMyProfile(): AuthResult<UserProfile> =
-        api.get("users/me", token()).map { raw ->
-            val o = JSONObject(raw)
-            UserProfile(
-                id = o.getString("id"),
-                email = o.optString("email"),
-                firstName = o.optString("firstName"),
-                lastName = o.optString("lastName")
-            )
+        api.get("users/me", token()).map(::parseProfile)
+
+    suspend fun updateProfile(birthDateIso: String?, hobbies: String?): AuthResult<UserProfile> {
+        val body = JSONObject()
+        if (birthDateIso != null) body.put("birthDate", birthDateIso) else body.put("birthDate", JSONObject.NULL)
+        if (hobbies != null) body.put("hobbies", hobbies) else body.put("hobbies", JSONObject.NULL)
+        return api.put("users/me", body, token()).map(::parseProfile)
+    }
+
+    suspend fun uploadPhoto(bytes: ByteArray, mimeType: String): AuthResult<String> {
+        val ext = when (mimeType.lowercase()) {
+            "image/png" -> "png"
+            "image/webp" -> "webp"
+            "image/gif" -> "gif"
+            else -> "jpg"
         }
+        return api.upload("users/me/photo", bytes, "photo.$ext", mimeType, token()).map { raw ->
+            JSONObject(raw).getString("photoUrl")
+        }
+    }
+
+    private fun parseProfile(raw: String): UserProfile {
+        val o = JSONObject(raw)
+        return UserProfile(
+            id = o.getString("id"),
+            email = o.optString("email"),
+            firstName = o.optString("firstName"),
+            lastName = o.optString("lastName"),
+            photoUrl = o.optString("photoUrl").ifBlank { null },
+            birthDate = o.optString("birthDate").ifBlank { null },
+            hobbies = o.optString("hobbies").ifBlank { null }
+        )
+    }
 }

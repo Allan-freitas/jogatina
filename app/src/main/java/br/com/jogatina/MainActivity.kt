@@ -36,6 +36,8 @@ import br.com.jogatina.ui.games.LibraryViewModel
 import br.com.jogatina.data.notifications.NotificationsRepository
 import br.com.jogatina.ui.notifications.NotificationsScreen
 import br.com.jogatina.ui.notifications.NotificationsViewModel
+import br.com.jogatina.ui.profile.ProfileScreen
+import br.com.jogatina.ui.profile.ProfileViewModel
 import br.com.jogatina.ui.theme.JogatinaTheme
 import br.com.jogatina.ui.welcome.WelcomeScreen
 import br.com.jogatina.ui.welcome.WelcomeViewModel
@@ -75,6 +77,11 @@ class MainActivity : ComponentActivity() {
             welcomeViewModel.logout()
         }
     }
+    private val profileViewModel: ProfileViewModel by viewModels {
+        ProfileViewModel.factory(userRepository) {
+            welcomeViewModel.logout()
+        }
+    }
     private val catalogViewModel: CatalogViewModel by viewModels {
         CatalogViewModel.factory(
             gamesRepository,
@@ -96,6 +103,7 @@ class MainActivity : ComponentActivity() {
                         libraryViewModel = libraryViewModel,
                         catalogViewModel = catalogViewModel,
                         notificationsViewModel = notificationsViewModel,
+                        profileViewModel = profileViewModel,
                         onLogout = { welcomeViewModel.logout() }
                     )
                 } else {
@@ -113,6 +121,7 @@ fun JogatinaApp(
     libraryViewModel: LibraryViewModel? = null,
     catalogViewModel: CatalogViewModel? = null,
     notificationsViewModel: NotificationsViewModel? = null,
+    profileViewModel: ProfileViewModel? = null,
     onLogout: () -> Unit = {}
 ) {
     var currentDestination by rememberSaveable { mutableStateOf(AppDestinations.HOME) }
@@ -173,6 +182,12 @@ fun JogatinaApp(
                             catalogViewModel?.retry()
                             showCatalog = true
                         },
+                        modifier = Modifier.padding(innerPadding)
+                    )
+                }
+                currentDestination == AppDestinations.PROFILE && profileViewModel != null -> {
+                    ProfileScreen(
+                        viewModel = profileViewModel,
                         modifier = Modifier.padding(innerPadding)
                     )
                 }

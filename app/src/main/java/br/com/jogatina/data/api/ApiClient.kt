@@ -20,6 +20,9 @@ class ApiClient(val baseUrl: String) {
     suspend fun post(path: String, body: JSONObject, token: String? = null): AuthResult<String> =
         withContext(Dispatchers.IO) { request("POST", path, body.toString().toByteArray(), token) }
 
+    suspend fun put(path: String, body: JSONObject, token: String? = null): AuthResult<String> =
+        withContext(Dispatchers.IO) { request("PUT", path, body.toString().toByteArray(), token) }
+
     suspend fun postEmpty(path: String, token: String? = null): AuthResult<String> =
         withContext(Dispatchers.IO) { request("POST", path, null, token) }
 
