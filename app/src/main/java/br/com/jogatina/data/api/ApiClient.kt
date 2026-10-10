@@ -34,13 +34,14 @@ class ApiClient(val baseUrl: String) {
         bytes: ByteArray,
         fileName: String,
         mimeType: String,
-        token: String? = null
+        token: String? = null,
+        method: String = "POST"
     ): AuthResult<String> = withContext(Dispatchers.IO) {
         val startedAt = System.currentTimeMillis()
         val boundary = "jogatina${System.currentTimeMillis()}"
         val url = URL("${baseUrl.trimEnd('/')}/$path")
         val conn = (url.openConnection() as HttpURLConnection).apply {
-            requestMethod = "POST"
+            requestMethod = method
             connectTimeout = 30_000
             readTimeout = 60_000
             doOutput = true
@@ -61,9 +62,9 @@ class ApiClient(val baseUrl: String) {
                 writer.append("\r\n--").append(boundary).append("--\r\n")
                 writer.flush()
             }
-            readResult(conn, "UPLOAD", path, startedAt)
+            readResult(conn, "UPLOAD $method", path, startedAt)
         } catch (e: Exception) {
-            Log.e(TAG, "UPLOAD $path falhou: ${e.javaClass.simpleName}: ${e.message}")
+            Log.e(TAG, "UPLOAD $method $path falhou: ${e.javaClass.simpleName}: ${e.message}")
             AuthResult.Error(e.message ?: "Falha de rede", null)
         } finally {
             conn.disconnect()

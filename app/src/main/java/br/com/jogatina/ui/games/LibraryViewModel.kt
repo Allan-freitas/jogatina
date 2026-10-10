@@ -12,8 +12,9 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 
-data class LibraryUiState(
-    val games: List<MyGameDto> = emptyList(),
+data class NewCover(val bytes: ByteArray, val mimeType: String)
+
+data class LibraryUiState(    val games: List<MyGameDto> = emptyList(),
     val loading: Boolean = false,
     val refreshing: Boolean = false,
     val error: String? = null,
@@ -83,11 +84,26 @@ class LibraryViewModel(
 
     /**
      * A API não tem update: trocar status/favorito = DELETE + POST.
+     * Se houver capa nova, ela é enviada antes (vale para todo o catálogo).
      */
     fun changeStatus(game: MyGameDto, status: GameStatus, isFavorite: Boolean) {
+        updateGame(game, status, isFavorite, cover = null)
+    }
+
+    fun updateGame(game: MyGameDto, status: GameStatus, isFavorite: Boolean, cover: NewCover?) {
         if (_state.value.updating.contains(game.gameId)) return
         _state.value = _state.value.copy(updating = _state.value.updating + game.gameId, error = null)
         viewModelScope.launch {
+            if (cover != null) {
+                when (val up = games.uploadCover(game.gameId, cover.bytes, cover.mimeType)) {
+                    is AuthResult.Success -> Unit
+                    is AuthResult.Error -> {
+                        _state.value = _state.value.copy(updating = _state.value.updating - game.gameId)
+                        handleError(up)
+                        return@launch
+                    }
+                }
+            }
             val del = games.removeFromLibrary(game.gameId)
             if (del is AuthResult.Error && del.statusCode != 404) {
                 _state.value = _state.value.copy(updating = _state.value.updating - game.gameId)

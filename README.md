@@ -36,6 +36,9 @@ Após o login o usuário cai no **Feed**, com saudação **"Olá, {nome}"**
 - Lupa na TopAppBar abre o **Catálogo** (`GET games` com busca + debounce,
   filtros de gênero/plataforma, grid 2 colunas, "carregar mais"): botão ＋
   abre dialog de status + favorito (`POST users/me/games`).
+- Tocar num jogo da biblioteca abre edição (status/favorito) com **envio de
+  capa** (`PUT games/{id}/cover` multipart — a capa vale para o catálogo
+  todo).
 - A API não tem update: 409 `AlreadyInLibrary` oferece **atualizar** e a
   troca de status/favorito é **DELETE + POST**.
 
@@ -103,6 +106,7 @@ Base de produção: `https://agfapp.com` (ver `AuthRepository.DEFAULT_BASE_URL`)
 | Catálogo          | `GET /games`          | `?search=&genre=&platform=&minPopularity=&page=&pageSize=` (anônimo) |
 | Minha biblioteca  | `GET /users/me/games` | jogos salvos (status, favorito, capa) |
 | Adicionar         | `POST /users/me/games` | `gameId`, `status` (Wishlist/Playing/Completed), `isFavorite` |
+| Capa do jogo      | `PUT /games/{id}/cover` | multipart `file` (JPEG/PNG/WebP/GIF ≤ 5 MB) → `{ coverImageUrl }` |
 | Remover           | `DELETE /users/me/games/{id}` | 204 (troca de status = DELETE + POST) |
 | Notificações      | `GET /notifications`  | `?onlyUnread=` → lista (pedidos, aceites, mensagens) |
 | Ler uma           | `PATCH /notifications/{id}/read` | marca como lida |

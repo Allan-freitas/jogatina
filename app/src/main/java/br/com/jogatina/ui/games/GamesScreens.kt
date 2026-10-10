@@ -1,5 +1,8 @@
 package br.com.jogatina.ui.games
 
+import android.net.Uri
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -61,6 +64,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
@@ -92,6 +96,31 @@ fun LibraryScreen(
 ) {
     val state by viewModel.state.collectAsState()
     var editing by remember { mutableStateOf<MyGameDto?>(null) }
+    var coverBytes by remember { mutableStateOf<ByteArray?>(null) }
+    var coverMime by remember { mutableStateOf("image/jpeg") }
+    var coverUri by remember { mutableStateOf<Uri?>(null) }
+    val context = LocalContext.current
+
+    val pickCover = rememberLauncherForActivityResult(ActivityResultContracts.GetContent()) { uri: Uri? ->
+        if (uri == null) return@rememberLauncherForActivityResult
+        try {
+            val resolver = context.contentResolver
+            coverMime = resolver.getType(uri) ?: "image/jpeg"
+            resolver.openInputStream(uri)?.use { input ->
+                val bytes = input.readBytes()
+                if (bytes.size > 8 * 1024 * 1024) return@rememberLauncherForActivityResult
+                coverBytes = bytes
+                coverUri = uri
+            }
+        } catch (_: Exception) {
+        }
+    }
+
+    fun closeEditor() {
+        editing = null
+        coverBytes = null
+        coverUri = null
+    }
 
     Scaffold(
         modifier = modifier.fillMaxSize(),
@@ -178,11 +207,16 @@ fun LibraryScreen(
             initialStatus = game.status,
             initialFavorite = game.isFavorite,
             isUpdate = true,
+            busy = state.updating.contains(game.gameId),
+            coverUrl = viewModel.coverUrl(game.coverImageUrl),
+            pickedCoverUri = coverUri,
+            onPickCover = { pickCover.launch("image/*") },
             onConfirm = { status, fav ->
-                viewModel.changeStatus(game, status, fav)
-                editing = null
+                val cover = coverBytes?.let { NewCover(it, coverMime) }
+                viewModel.updateGame(game, status, fav, cover)
+                closeEditor()
             },
-            onDismiss = { editing = null }
+            onDismiss = { closeEditor() }
         )
     }
 }
@@ -496,6 +530,10 @@ private fun AddToLibraryDialog(
     initialFavorite: Boolean,
     isUpdate: Boolean,
     conflictMessage: String? = null,
+    busy: Boolean = false,
+    coverUrl: String? = null,
+    pickedCoverUri: Uri? = null,
+    onPickCover: (() -> Unit)? = null,
     onConfirm: (GameStatus, Boolean) -> Unit,
     onDismiss: () -> Unit
 ) {
@@ -513,6 +551,41 @@ private fun AddToLibraryDialog(
             if (conflictMessage != null) {
                 Spacer(modifier = Modifier.height(4.dp))
                 Text(conflictMessage, color = JogatinaGold, fontSize = 13.sp)
+            }
+            if (onPickCover != null) {
+                Spacer(modifier = Modifier.height(12.dp))
+                Text("Capa do jogo (vale para o catálogo)", color = JogatinaWhite70, fontSize = 12.sp)
+                Spacer(modifier = Modifier.height(6.dp))
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    val preview = pickedCoverUri?.toString() ?: coverUrl
+                    if (preview != null) {
+                        AsyncImage(
+                            model = preview,
+                            contentDescription = "Capa",
+                            modifier = Modifier
+                                .size(width = 64.dp, height = 84.dp)
+                                .clip(RoundedCornerShape(10.dp)),
+                            contentScale = ContentScale.Crop
+                        )
+                    } else {
+                        Box(
+                            modifier = Modifier
+                                .size(width = 64.dp, height = 84.dp)
+                                .clip(RoundedCornerShape(10.dp))
+                                .background(JogatinaMagenta.copy(alpha = 0.25f)),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Text("?", color = JogatinaWhite, fontWeight = FontWeight.Bold, fontSize = 22.sp)
+                        }
+                    }
+                    Spacer(modifier = Modifier.width(10.dp))
+                    TextButton(onClick = onPickCover) {
+                        Text(
+                            if (pickedCoverUri != null) "Trocar imagem" else "Enviar capa",
+                            color = JogatinaMagenta, fontSize = 14.sp
+                        )
+                    }
+                }
             }
             Spacer(modifier = Modifier.height(12.dp))
             GameStatus.entries.forEach { option ->
@@ -541,15 +614,20 @@ private fun AddToLibraryDialog(
             }
             Spacer(modifier = Modifier.height(12.dp))
             Row(horizontalArrangement = Arrangement.End, modifier = Modifier.fillMaxWidth()) {
-                TextButton(onClick = onDismiss) {
+                TextButton(onClick = onDismiss, enabled = !busy) {
                     Text("Cancelar", color = JogatinaWhite70)
                 }
                 Button(
                     onClick = { onConfirm(status, favorite) },
+                    enabled = !busy,
                     shape = RoundedCornerShape(10.dp),
                     colors = ButtonDefaults.buttonColors(containerColor = JogatinaMagenta, contentColor = JogatinaWhite)
                 ) {
-                    Text(if (isUpdate) "Atualizar" else "Adicionar", fontWeight = FontWeight.SemiBold)
+                    if (busy) {
+                        CircularProgressIndicator(color = JogatinaWhite, strokeWidth = 2.dp, modifier = Modifier.size(18.dp))
+                    } else {
+                        Text(if (isUpdate) "Atualizar" else "Adicionar", fontWeight = FontWeight.SemiBold)
+                    }
                 }
             }
         }

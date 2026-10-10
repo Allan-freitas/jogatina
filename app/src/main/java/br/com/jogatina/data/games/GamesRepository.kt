@@ -45,6 +45,17 @@ class GamesRepository(
     suspend fun removeFromLibrary(gameId: String): AuthResult<Unit> =
         api.delete("users/me/games/$gameId", token()).map { }
 
+    suspend fun uploadCover(gameId: String, bytes: ByteArray, mimeType: String): AuthResult<String> {
+        val ext = when (mimeType.lowercase()) {
+            "image/png" -> "png"
+            "image/webp" -> "webp"
+            "image/gif" -> "gif"
+            else -> "jpg"
+        }
+        return api.upload("games/$gameId/cover", bytes, "cover.$ext", mimeType, token(), method = "PUT")
+            .map { raw -> JSONObject(raw).getString("coverImageUrl") }
+    }
+
     private fun enc(value: String): String = URLEncoder.encode(value, Charsets.UTF_8.name())
 
     private fun parseGames(array: JSONArray): List<GameDto> =
