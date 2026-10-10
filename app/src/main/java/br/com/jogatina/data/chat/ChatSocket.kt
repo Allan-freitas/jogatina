@@ -161,6 +161,11 @@ class ChatSocket(
         private val client: OkHttpClient by lazy {
             OkHttpClient.Builder()
                 .retryOnConnectionFailure(true)
+                // Cold start: handshake pode demorar; leitura sem timeout
+                // (WS é longa duração, com ping de app a cada 25 s).
+                .connectTimeout(30, java.util.concurrent.TimeUnit.SECONDS)
+                .readTimeout(0, java.util.concurrent.TimeUnit.MINUTES)
+                .writeTimeout(30, java.util.concurrent.TimeUnit.SECONDS)
                 .build()
         }
     }

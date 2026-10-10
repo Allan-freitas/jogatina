@@ -70,6 +70,7 @@ app/src/main/java/br/com/jogatina/
 ├── MainActivity.kt            # fluxo welcome -> feed/biblioteca/perfil
 ├── data/api/
 │   └── ApiClient.kt           # GET/POST/PUT/PATCH/DELETE JSON + multipart (Bearer)
+│                             # read 30 s + 1 retry automático (cold start da API)
 ├── data/auth/
 │   ├── AuthModels.kt          # contratos das rotas de auth
 │   ├── AuthRepository.kt      # auth via ApiClient
@@ -165,6 +166,10 @@ Pré-requisitos: JDK 17+, Android SDK com `local.properties` (`sdk.dir`).
 Preview da welcome: `WelcomeScreen.kt` → `WelcomePreview` no Android Studio.
 
 ## Backend
+
+> Cold start: a hospedagem compartilhada "dorme" sem tráfego. O app tolera
+> (timeout de leitura 30 s + 1 retry), mas o ideal é um keep-alive externo
+> gratuito (ex.: UptimeRobot) chamando `GET /health` a cada ~5 min.
 
 Contratos espelham `CleanArchitecture.slnx`:
 - `src/Web.Api/Endpoints/Users/`: `Login.cs`, `Register.cs`, `SocialLogin.cs`.
