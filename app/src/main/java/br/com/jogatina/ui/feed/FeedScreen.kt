@@ -376,14 +376,22 @@ private fun PostCard(
 
             if (imageUrl != null) {
                 Spacer(modifier = Modifier.height(8.dp))
-                AsyncImage(
-                    model = imageUrl,
-                    contentDescription = "Imagem do post",
+                Box(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .clip(RoundedCornerShape(12.dp)),
-                    contentScale = ContentScale.FillWidth
-                )
+                        .clip(RoundedCornerShape(12.dp))
+                        .background(JogatinaWhite)
+                        .padding(3.dp)
+                ) {
+                    AsyncImage(
+                        model = imageUrl,
+                        contentDescription = "Imagem do post",
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clip(RoundedCornerShape(9.dp)),
+                        contentScale = ContentScale.FillWidth
+                    )
+                }
             }
 
             Spacer(modifier = Modifier.height(4.dp))
