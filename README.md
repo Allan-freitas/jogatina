@@ -140,9 +140,9 @@ Base de produção: `https://agfapp.com` (ver `AuthRepository.DEFAULT_BASE_URL`)
 
 | Ação              | Rota                  | Corpo |
 |-------------------|-----------------------|-------|
-| Login             | `POST /auth/login`    | `email`, `password` → `accessToken`, `refreshToken` |
+| Login             | `POST /auth/login`    | `email`, `password`, `device?` → `accessToken`, `refreshToken` |
 | Registro          | `POST /auth/register` | `email`, `firstName`, `lastName`, `password` → Id (auto-login em seguida) |
-| Login social      | `POST /auth/social`   | `provider`, `token`, `providerUserId?` → `accessToken`, `refreshToken` |
+| Login social      | `POST /auth/social`   | `provider`, `token`, `providerUserId?`, `device?` → tokens |
 | Feed              | `GET /feed/posts`     | `?page=&pageSize=` → posts (autor, likes, `likedByMe`, comentários) |
 | Criar post        | `POST /feed/posts`    | `content?`, `imageUrl?` (relativo, ex. `/uploads/x.jpg`) → Id |
 | Upload de imagem  | `POST /feed/images`   | multipart `file` (JPEG/PNG/WebP/GIF ≤ 5 MB) → `{ imageUrl }` |
@@ -215,6 +215,9 @@ Contratos espelham `CleanArchitecture.slnx`:
   `Add_UserProfileFields`, `Add_UserCountry`; endpoints `UpdateProfile.cs`
   (`PUT users/me`), `UploadPhoto.cs` (`POST users/me/photo`), `GetMe.cs`,
   `GetPublicProfile.cs`, `Games/GetUserGames.cs`.
+- Histórico de logins: `Domain/Users/LoginHistory.cs` + migration
+  `Add_LoginHistory` (método, IP via `X-Forwarded-For`, User-Agent e ficha do
+  aparelho em `device?` no login/social).
 - Imagens salvas em `wwwroot/uploads` (`IFileStorage`/`LocalFileStorage`,
   servidas via `UseStaticFiles`).
 - Capas dos jogos em `wwwroot/game-covers` (geradas como placeholder neon em

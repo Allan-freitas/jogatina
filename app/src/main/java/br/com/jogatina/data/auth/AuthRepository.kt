@@ -1,6 +1,7 @@
 package br.com.jogatina.data.auth
 
 import br.com.jogatina.data.api.ApiClient
+import br.com.jogatina.data.device.DeviceInfo
 import org.json.JSONObject
 
 /**
@@ -18,10 +19,15 @@ class AuthRepository(
 ) {
     private val api = ApiClient(baseUrl)
 
-    suspend fun login(email: String, password: String): AuthResult<AccessTokensResponse> {
+    suspend fun login(
+        email: String,
+        password: String,
+        device: DeviceInfo? = null
+    ): AuthResult<AccessTokensResponse> {
         val body = JSONObject()
             .put("email", email)
             .put("password", password)
+        if (device != null) body.put("device", device.toJson())
         return api.post("auth/login", body).map { raw ->
             val json = JSONObject(raw)
             AccessTokensResponse(
@@ -54,13 +60,18 @@ class AuthRepository(
      * então "google" passa pelo SocialLoginCommand sem mudar a API.
      * O [token] aqui é o Google ID token (JWT) obtido no app.
      */
-    suspend fun socialLoginGoogle(idToken: String): AuthResult<AccessTokensResponse> =
-        socialLogin(provider = "google", token = idToken)
+    suspend fun socialLoginGoogle(idToken: String, device: DeviceInfo? = null): AuthResult<AccessTokensResponse> =
+        socialLogin(provider = "google", token = idToken, device = device)
 
-    suspend fun socialLogin(provider: String, token: String): AuthResult<AccessTokensResponse> {
+    suspend fun socialLogin(
+        provider: String,
+        token: String,
+        device: DeviceInfo? = null
+    ): AuthResult<AccessTokensResponse> {
         val body = JSONObject()
             .put("provider", provider)
             .put("token", token)
+        if (device != null) body.put("device", device.toJson())
         return api.post("auth/social", body).map { raw ->
             val json = JSONObject(raw)
             AccessTokensResponse(

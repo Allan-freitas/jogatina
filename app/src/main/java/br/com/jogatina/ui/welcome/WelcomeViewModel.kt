@@ -6,6 +6,7 @@ import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
 import br.com.jogatina.R
 import br.com.jogatina.data.auth.AuthRepository
+import br.com.jogatina.data.device.DeviceInfo
 import br.com.jogatina.data.auth.AuthResult
 import br.com.jogatina.data.auth.TokenStore
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -52,7 +53,7 @@ class WelcomeViewModel(
         if (_state.value.loading) return
         _state.value = _state.value.copy(loading = true, error = null)
         viewModelScope.launch {
-            when (val r = auth.socialLoginGoogle(idToken)) {
+            when (val r = auth.socialLoginGoogle(idToken, DeviceInfo.collect(appContext))) {
                 is AuthResult.Success -> {
                     tokens.save(r.value)
                     _state.value = _state.value.copy(loading = false, loggedIn = true)
@@ -68,7 +69,7 @@ class WelcomeViewModel(
         if (_state.value.loading) return
         _state.value = _state.value.copy(loading = true, error = null)
         viewModelScope.launch {
-            when (val r = auth.login(email, password)) {
+            when (val r = auth.login(email, password, DeviceInfo.collect(appContext))) {
                 is AuthResult.Success -> {
                     tokens.save(r.value)
                     _state.value = _state.value.copy(loading = false, loggedIn = true)
@@ -87,7 +88,7 @@ class WelcomeViewModel(
             when (val r = auth.register(email, firstName, lastName, password)) {
                 is AuthResult.Success -> {
                     // Registro retorna só o Id; faz login em seguida para obter tokens.
-                    when (val l = auth.login(email, password)) {
+                    when (val l = auth.login(email, password, DeviceInfo.collect(appContext))) {
                         is AuthResult.Success -> {
                             tokens.save(l.value)
                             _state.value = _state.value.copy(loading = false, loggedIn = true)
