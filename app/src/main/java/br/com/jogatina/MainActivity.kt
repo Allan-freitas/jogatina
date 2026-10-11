@@ -6,6 +6,7 @@ import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.viewModels
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -15,6 +16,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -340,88 +342,108 @@ enum class AppDestinations(
 }
 
 /**
- * Bottom bar gamer: fina (60dp), ícones compactos (22dp), fundo navy com
- * filete neon no topo e indicador brilhante no item selecionado.
+ * Bottom bar gamer flutuante: pílula arredondada com margem dos botões do
+ * sistema, ícones compactos (22dp), fundo navy e indicador neon no ativo.
  */
 @Composable
 private fun GamerBottomBar(
     selected: AppDestinations,
     onSelect: (AppDestinations) -> Unit
 ) {
-    Column(modifier = Modifier.fillMaxWidth()) {
-        Box(
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(2.dp)
-                .background(
-                    Brush.horizontalGradient(
-                        colors = listOf(
-                            Color.Transparent,
-                            br.com.jogatina.ui.theme.JogatinaMagenta.copy(alpha = 0.7f),
-                            Color.Transparent
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .navigationBarsPadding()
+            .padding(horizontal = 16.dp)
+            .padding(bottom = 10.dp)
+            .shadow(
+                elevation = 12.dp,
+                shape = RoundedCornerShape(22.dp),
+                ambientColor = br.com.jogatina.ui.theme.JogatinaMagenta.copy(alpha = 0.35f),
+                spotColor = br.com.jogatina.ui.theme.JogatinaMagenta.copy(alpha = 0.35f)
+            )
+            .clip(RoundedCornerShape(22.dp))
+            .background(br.com.jogatina.ui.theme.JogatinaNavyMid)
+            .border(
+                width = 1.dp,
+                color = br.com.jogatina.ui.theme.JogatinaMagenta.copy(alpha = 0.45f),
+                shape = RoundedCornerShape(22.dp)
+            )
+    ) {
+        Column(modifier = Modifier.fillMaxWidth()) {
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(2.dp)
+                    .background(
+                        Brush.horizontalGradient(
+                            colors = listOf(
+                                Color.Transparent,
+                                br.com.jogatina.ui.theme.JogatinaMagenta.copy(alpha = 0.7f),
+                                Color.Transparent
+                            )
                         )
                     )
-                )
-        )
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(60.dp)
-                .background(br.com.jogatina.ui.theme.JogatinaNavyMid),
-            horizontalArrangement = Arrangement.SpaceEvenly,
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            AppDestinations.entries.forEach { destination ->
-                val isSelected = destination == selected
-                Column(
-                    horizontalAlignment = Alignment.CenterHorizontally,
-                    verticalArrangement = Arrangement.Center,
-                    modifier = Modifier
-                        .weight(1f)
-                        .clickable { onSelect(destination) }
-                        .padding(vertical = 6.dp)
-                ) {
-                    if (isSelected) {
-                        Box(
-                            modifier = Modifier
-                                .size(width = 22.dp, height = 3.dp)
-                                .shadow(
-                                    elevation = 6.dp,
-                                    shape = RoundedCornerShape(2.dp),
-                                    ambientColor = br.com.jogatina.ui.theme.JogatinaMagenta,
-                                    spotColor = br.com.jogatina.ui.theme.JogatinaMagenta
-                                )
-                                .clip(RoundedCornerShape(2.dp))
-                                .background(br.com.jogatina.ui.theme.JogatinaMagenta)
-                        )
-                    } else {
-                        Box(modifier = Modifier.size(width = 22.dp, height = 3.dp))
-                    }
-                    Spacer(modifier = Modifier.height(3.dp))
-                    Icon(
-                        painterResource(destination.icon),
-                        contentDescription = stringResource(destination.labelRes),
-                        tint = if (isSelected) {
-                            br.com.jogatina.ui.theme.JogatinaMagenta
+            )
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(60.dp),
+                horizontalArrangement = Arrangement.SpaceEvenly,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                AppDestinations.entries.forEach { destination ->
+                    val isSelected = destination == selected
+                    Column(
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        verticalArrangement = Arrangement.Center,
+                        modifier = Modifier
+                            .weight(1f)
+                            .clickable { onSelect(destination) }
+                            .padding(vertical = 6.dp)
+                    ) {
+                        if (isSelected) {
+                            Box(
+                                modifier = Modifier
+                                    .size(width = 22.dp, height = 3.dp)
+                                    .shadow(
+                                        elevation = 6.dp,
+                                        shape = RoundedCornerShape(2.dp),
+                                        ambientColor = br.com.jogatina.ui.theme.JogatinaMagenta,
+                                        spotColor = br.com.jogatina.ui.theme.JogatinaMagenta
+                                    )
+                                    .clip(RoundedCornerShape(2.dp))
+                                    .background(br.com.jogatina.ui.theme.JogatinaMagenta)
+                            )
                         } else {
-                            br.com.jogatina.ui.theme.JogatinaWhite.copy(alpha = 0.45f)
-                        },
-                        modifier = Modifier.size(22.dp)
-                    )
-                    Text(
-                        text = stringResource(destination.labelRes),
-                        color = if (isSelected) {
-                            br.com.jogatina.ui.theme.JogatinaWhite
-                        } else {
-                            br.com.jogatina.ui.theme.JogatinaWhite.copy(alpha = 0.45f)
-                        },
-                        fontSize = 10.sp,
-                        fontWeight = if (isSelected) {
-                            FontWeight.Bold
-                        } else {
-                            FontWeight.Normal
+                            Box(modifier = Modifier.size(width = 22.dp, height = 3.dp))
                         }
-                    )
+                        Spacer(modifier = Modifier.height(3.dp))
+                        Icon(
+                            painterResource(destination.icon),
+                            contentDescription = stringResource(destination.labelRes),
+                            tint = if (isSelected) {
+                                br.com.jogatina.ui.theme.JogatinaMagenta
+                            } else {
+                                br.com.jogatina.ui.theme.JogatinaWhite.copy(alpha = 0.45f)
+                            },
+                            modifier = Modifier.size(22.dp)
+                        )
+                        Text(
+                            text = stringResource(destination.labelRes),
+                            color = if (isSelected) {
+                                br.com.jogatina.ui.theme.JogatinaWhite
+                            } else {
+                                br.com.jogatina.ui.theme.JogatinaWhite.copy(alpha = 0.45f)
+                            },
+                            fontSize = 10.sp,
+                            fontWeight = if (isSelected) {
+                                FontWeight.Bold
+                            } else {
+                                FontWeight.Normal
+                            }
+                        )
+                    }
                 }
             }
         }
