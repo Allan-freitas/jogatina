@@ -36,6 +36,19 @@ class UserRepository(
         }
     }
 
+    suspend fun getPublicProfile(userId: String): AuthResult<PublicProfile> =
+        api.get("users/$userId/profile", token()).map { raw ->
+            val o = JSONObject(raw)
+            PublicProfile(
+                id = o.getString("id"),
+                firstName = o.optString("firstName"),
+                lastName = o.optString("lastName"),
+                photoUrl = o.optString("photoUrl").ifBlank { null },
+                hobbies = o.optString("hobbies").ifBlank { null },
+                country = o.optString("country").ifBlank { null }
+            )
+        }
+
     private fun parseProfile(raw: String): UserProfile {
         val o = JSONObject(raw)
         return UserProfile(

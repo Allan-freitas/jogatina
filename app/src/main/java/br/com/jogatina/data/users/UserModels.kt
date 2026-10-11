@@ -31,3 +31,17 @@ data class UserProfile(
             ?.reversed()
             ?.joinToString("/")
 }
+
+/** Perfil público de outro jogador (sem e-mail/nascimento). */
+data class PublicProfile(
+    val id: String,
+    val firstName: String,
+    val lastName: String,
+    val photoUrl: String? = null,
+    val hobbies: String? = null,
+    val country: String? = null
+) {
+    val fullName: String
+        get() = listOf(firstName, lastName).filter { it.isNotBlank() }.joinToString(" ")
+            .ifBlank { "Jogador" }
+}

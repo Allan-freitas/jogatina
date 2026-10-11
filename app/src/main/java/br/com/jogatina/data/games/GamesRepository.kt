@@ -35,6 +35,9 @@ class GamesRepository(
     suspend fun getMyGames(): AuthResult<List<MyGameDto>> =
         api.get("users/me/games", token()).map { raw -> parseMyGames(JSONArray(raw)) }
 
+    suspend fun getUserGames(userId: String): AuthResult<List<MyGameDto>> =
+        api.get("users/$userId/games", token()).map { raw -> parseMyGames(JSONArray(raw)) }
+
     suspend fun addToLibrary(gameId: String, status: GameStatus, isFavorite: Boolean): AuthResult<String> {
         val body = JSONObject()
             .put("gameId", gameId)

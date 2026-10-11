@@ -93,6 +93,7 @@ fun FeedScreen(
     onNotificationsClick: () -> Unit = {},
     unreadChatCount: Int = 0,
     onChatClick: () -> Unit = {},
+    onAuthorClick: (String) -> Unit = {},
     modifier: Modifier = Modifier
 ) {
     val state by viewModel.state.collectAsState()
@@ -248,7 +249,8 @@ fun FeedScreen(
                     onReplyTo = { viewModel.setReplyTo(post.id, it) },
                     onSendComment = { viewModel.submitComment(post.id) },
                     onDelete = { viewModel.deletePost(post.id) },
-                    resolvePhoto = viewModel::postImageUrl
+                    resolvePhoto = viewModel::postImageUrl,
+                    onAuthorClick = onAuthorClick
                 )
             }
 
@@ -363,7 +365,8 @@ private fun PostCard(
     onReplyTo: (CommentDto?) -> Unit,
     onSendComment: () -> Unit,
     onDelete: () -> Unit,
-    resolvePhoto: (String?) -> String?
+    resolvePhoto: (String?) -> String?,
+    onAuthorClick: (String) -> Unit
 ) {
     Card(
         colors = CardDefaults.cardColors(containerColor = JogatinaNavyMid),
@@ -371,14 +374,22 @@ private fun PostCard(
     ) {
         Column(modifier = Modifier.padding(12.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
-                ProfileAvatar(
-                    photoUrl = resolvePhoto(post.authorPhotoUrl),
-                    name = post.authorName,
-                    size = 40.dp
-                )
+                Box(modifier = Modifier.clickable { onAuthorClick(post.authorId) }) {
+                    ProfileAvatar(
+                        photoUrl = resolvePhoto(post.authorPhotoUrl),
+                        name = post.authorName,
+                        size = 40.dp
+                    )
+                }
                 Spacer(modifier = Modifier.width(10.dp))
                 Column(modifier = Modifier.weight(1f)) {
-                    Text(post.authorName, color = JogatinaWhite, fontWeight = FontWeight.SemiBold, fontSize = 14.sp)
+                    Text(
+                        post.authorName,
+                        color = JogatinaWhite,
+                        fontWeight = FontWeight.SemiBold,
+                        fontSize = 14.sp,
+                        modifier = Modifier.clickable { onAuthorClick(post.authorId) }
+                    )
                     Text(timeAgo(post.createdOnUtc), color = JogatinaSubtitle, fontSize = 12.sp)
                 }
                 if (isMine) {
@@ -497,14 +508,16 @@ private fun PostCard(
                     CommentRow(
                         comment = comment,
                         photoUrl = resolvePhoto(comment.authorPhotoUrl),
-                        onReply = { onReplyTo(comment) }
+                        onReply = { onReplyTo(comment) },
+                        onAuthorClick = onAuthorClick
                     )
                     comment.replies.forEach { reply ->
                         CommentRow(
                             comment = reply,
                             photoUrl = resolvePhoto(reply.authorPhotoUrl),
                             indent = true,
-                            onReply = null
+                            onReply = null,
+                            onAuthorClick = onAuthorClick
                         )
                     }
                 }
@@ -558,14 +571,17 @@ private fun CommentRow(
     comment: CommentDto,
     photoUrl: String?,
     indent: Boolean = false,
-    onReply: (() -> Unit)?
+    onReply: (() -> Unit)?,
+    onAuthorClick: (String) -> Unit
 ) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
             .padding(start = if (indent) 40.dp else 0.dp, top = 6.dp)
     ) {
-        ProfileAvatar(photoUrl = photoUrl, name = comment.authorName, size = 30.dp)
+        Box(modifier = Modifier.clickable { onAuthorClick(comment.authorId) }) {
+            ProfileAvatar(photoUrl = photoUrl, name = comment.authorName, size = 30.dp)
+        }
         Spacer(modifier = Modifier.width(8.dp))
         Column(
             modifier = Modifier
@@ -575,7 +591,15 @@ private fun CommentRow(
                 .padding(8.dp)
         ) {
             Row(verticalAlignment = Alignment.CenterVertically) {
-                Text(comment.authorName, color = JogatinaWhite, fontWeight = FontWeight.SemiBold, fontSize = 12.sp, modifier = Modifier.weight(1f))
+                Text(
+                    comment.authorName,
+                    color = JogatinaWhite,
+                    fontWeight = FontWeight.SemiBold,
+                    fontSize = 12.sp,
+                    modifier = Modifier
+                        .weight(1f)
+                        .clickable { onAuthorClick(comment.authorId) }
+                )
                 if (onReply != null) {
                     TextButton(onClick = onReply) {
                         Text(stringResource(br.com.jogatina.R.string.reply), color = JogatinaMagenta, fontSize = 12.sp)
@@ -629,7 +653,8 @@ private fun PostCardPreview() {
                 onQuickReact = {}, onOpenPicker = {}, onClosePicker = {}, onReact = {},
                 onToggleComments = {}, onCommentInput = {},
                 onReplyTo = {}, onSendComment = {}, onDelete = {},
-                resolvePhoto = { it }
+                resolvePhoto = { it },
+                onAuthorClick = {}
             )
         }
     }

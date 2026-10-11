@@ -70,6 +70,8 @@ import br.com.jogatina.ui.chat.ChatListScreen
 import br.com.jogatina.ui.chat.ChatListViewModel
 import br.com.jogatina.ui.chat.ConversationScreen
 import br.com.jogatina.ui.chat.ConversationViewModel
+import br.com.jogatina.ui.profile.AuthorProfileScreen
+import br.com.jogatina.ui.profile.AuthorProfileViewModel
 import br.com.jogatina.ui.profile.ProfileScreen
 import br.com.jogatina.ui.profile.ProfileViewModel
 import br.com.jogatina.ui.theme.JogatinaTheme
@@ -171,6 +173,8 @@ class MainActivity : ComponentActivity() {
                         profileViewModel = profileViewModel,
                         chatListViewModel = chatListViewModel,
                         friendsViewModel = friendsViewModel,
+                        userRepository = userRepository,
+                        gamesRepository = gamesRepository,
                         chatRepository = chatRepository,
                         tokenStore = tokenStore,
                         apiBaseUrl = AuthRepository.DEFAULT_BASE_URL,
@@ -195,6 +199,8 @@ fun JogatinaApp(
     profileViewModel: ProfileViewModel? = null,
     chatListViewModel: ChatListViewModel? = null,
     friendsViewModel: FriendsViewModel? = null,
+    userRepository: UserRepository? = null,
+    gamesRepository: GamesRepository? = null,
     chatRepository: ChatRepository? = null,
     tokenStore: TokenStore? = null,
     apiBaseUrl: String = "",
@@ -206,6 +212,7 @@ fun JogatinaApp(
     var showNotifications by rememberSaveable { mutableStateOf(false) }
     var showChatList by rememberSaveable { mutableStateOf(false) }
     var showFriends by rememberSaveable { mutableStateOf(false) }
+    var selectedAuthorId by rememberSaveable { mutableStateOf<String?>(null) }
     var openConversationId by rememberSaveable { mutableStateOf<String?>(null) }
     var newChatFriend by remember { mutableStateOf<FriendDto?>(null) }
     val notificationsState = notificationsViewModel?.state?.collectAsState()?.value
@@ -223,7 +230,24 @@ fun JogatinaApp(
     ) { innerPadding ->
             val conversationKey = openConversationId ?: newChatFriend?.let { "new:${it.friendId}" }
             val appContext = androidx.compose.ui.platform.LocalContext.current.applicationContext
+            val authorKey = selectedAuthorId
             when {
+                authorKey != null && userRepository != null && gamesRepository != null -> {
+                    val authorVm: AuthorProfileViewModel = viewModel(
+                        key = "author:$authorKey",
+                        factory = AuthorProfileViewModel.factory(
+                            userRepository,
+                            gamesRepository,
+                            authorKey,
+                            onLogout
+                        )
+                    )
+                    AuthorProfileScreen(
+                        viewModel = authorVm,
+                        onBack = { selectedAuthorId = null },
+                        modifier = Modifier.padding(innerPadding)
+                    )
+                }
                 conversationKey != null && chatRepository != null && tokenStore != null -> {
                     val conversationVm: ConversationViewModel = viewModel(
                         key = conversationKey,
@@ -301,6 +325,7 @@ fun JogatinaApp(
                         onNotificationsClick = { showNotifications = true },
                         unreadChatCount = chatListState?.unreadTotal ?: 0,
                         onChatClick = { showChatList = true },
+                        onAuthorClick = { selectedAuthorId = it },
                         modifier = Modifier.padding(innerPadding)
                     )
                 }

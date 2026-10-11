@@ -24,6 +24,9 @@ Após o login o usuário cai no **Feed**, com saudação **"Olá, {nome}"**
 
 - Composer no topo: texto + anexo de imagem da galeria (`POST feed/images`
   multipart → `POST feed/posts`).
+- Toque no **nome/foto do autor** (posts e comentários) abre o **perfil
+  público** dele: foto, hobbies, país + biblioteca de jogos com capas
+  (`GET users/{id}/profile`, `GET users/{id}/games`).
 - Cards com autor (**foto** + nome), tempo relativo, imagem (Coil), contador de likes e de
   comentários, e lixeira nos próprios posts.
 - **Reactions** estilo LinkedIn: toque no coração alterna "Amei" (❤️),
@@ -164,6 +167,8 @@ Base de produção: `https://agfapp.com` (ver `AuthRepository.DEFAULT_BASE_URL`)
 | Remover amigo     | `DELETE /social/friends/{id}` | 204 |
 | Saúde             | `GET /health`         | status da API + banco |
 | Meu perfil        | `GET /users/me`       | perfil do logado (nome do "Olá") |
+| Perfil público    | `GET /users/{id}/profile` | nome, foto, hobbies, país (sem e-mail/nascimento) |
+| Jogos de jogador  | `GET /users/{id}/games` | biblioteca pública com capas |
 | Editar perfil     | `PUT /users/me`       | `{ birthDate?, hobbies?, country? }` (ISO yyyy-MM-dd, ISO alpha-2) |
 | Foto de perfil    | `POST /users/me/photo` | multipart `file` (JPEG/PNG/WebP/GIF ≤ 5 MB) |
 
@@ -206,7 +211,8 @@ Contratos espelham `CleanArchitecture.slnx`:
   (+ `:guid` em `users/{userId}` para não engolir o `/users/search`).
 - Perfil: `User.PhotoUrl/BirthDate/Hobbies/Country` + migrations
   `Add_UserProfileFields`, `Add_UserCountry`; endpoints `UpdateProfile.cs`
-  (`PUT users/me`), `UploadPhoto.cs` (`POST users/me/photo`), `GetMe.cs`.
+  (`PUT users/me`), `UploadPhoto.cs` (`POST users/me/photo`), `GetMe.cs`,
+  `GetPublicProfile.cs`, `Games/GetUserGames.cs`.
 - Imagens salvas em `wwwroot/uploads` (`IFileStorage`/`LocalFileStorage`,
   servidas via `UseStaticFiles`).
 - Capas dos jogos em `wwwroot/game-covers` (geradas como placeholder neon em

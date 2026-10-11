@@ -166,4 +166,6 @@
     <string name="change_photo">Trocar foto</string>
     <string name="profile_photo">Foto de perfil</string>
     <string name="ok">OK</string>
+    <string name="profile_games">Jogos (%1$d)</string>
+    <string name="author_no_games">Ainda sem jogos na biblioteca.</string>
 </resources>
