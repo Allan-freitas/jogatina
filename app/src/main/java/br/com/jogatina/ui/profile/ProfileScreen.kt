@@ -46,6 +46,7 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.SelectableDates
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
@@ -357,7 +358,14 @@ private fun EditProfileDialog(
             OutlinedTextField(
                 value = hobbies,
                 onValueChange = { if (it.length <= 500) hobbies = it },
-                label = { Text(stringResource(br.com.jogatina.R.string.hobbies_hint), color = JogatinaWhite70, fontSize = 13.sp) },
+                label = { Text(stringResource(br.com.jogatina.R.string.hobbies_label), color = JogatinaWhite70, fontSize = 13.sp) },
+                supportingText = {
+                    Text(
+                        "${hobbies.length}/500",
+                        color = if (hobbies.length >= 500) JogatinaDiscordRed else JogatinaSubtitle,
+                        fontSize = 11.sp
+                    )
+                },
                 modifier = Modifier.fillMaxWidth(),
                 maxLines = 3,
                 colors = profileFieldColors()
@@ -393,7 +401,11 @@ private fun EditProfileDialog(
 
     if (showDatePicker) {
         val dateState = rememberDatePickerState(
-            initialSelectedDateMillis = birthIso?.toEpochMillis() ?: System.currentTimeMillis()
+            initialSelectedDateMillis = birthIso?.toEpochMillis() ?: System.currentTimeMillis(),
+            selectableDates = object : SelectableDates {
+                override fun isSelectableDate(utcTimeMillis: Long): Boolean =
+                    utcTimeMillis <= System.currentTimeMillis()
+            }
         )
         DatePickerDialog(
             onDismissRequest = { showDatePicker = false },

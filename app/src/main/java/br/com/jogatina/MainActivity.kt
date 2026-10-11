@@ -322,9 +322,16 @@ fun JogatinaApp(
                         viewModel = feedViewModel,
                         onLogout = onLogout,
                         unreadCount = notificationsState?.unreadCount ?: 0,
-                        onNotificationsClick = { showNotifications = true },
+                        onNotificationsClick = {
+                            // Recarrega para exibir notificações recém-chegadas.
+                            notificationsViewModel?.refresh()
+                            showNotifications = true
+                        },
                         unreadChatCount = chatListState?.unreadTotal ?: 0,
-                        onChatClick = { showChatList = true },
+                        onChatClick = {
+                            chatListViewModel?.refresh()
+                            showChatList = true
+                        },
                         onAuthorClick = { selectedAuthorId = it },
                         modifier = Modifier.padding(innerPadding)
                     )
@@ -343,7 +350,11 @@ fun JogatinaApp(
                 currentDestination == AppDestinations.PROFILE && profileViewModel != null -> {
                     ProfileScreen(
                         viewModel = profileViewModel,
-                        onFriendsClick = { showFriends = true },
+                        onFriendsClick = {
+                            // Recarrega para exibir pedidos recém-chegados.
+                            friendsViewModel?.refresh()
+                            showFriends = true
+                        },
                         modifier = Modifier.padding(innerPadding)
                     )
                 }

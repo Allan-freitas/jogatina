@@ -216,6 +216,16 @@ class ApiClient(
         if (raw.isBlank()) return "Erro $code"
         return try {
             val json = JSONObject(raw)
+            // problem+json com erros por campo: mostra o detalhe útil em vez do genérico.
+            val errors = json.optJSONArray("errors")
+            if (errors != null && errors.length() > 0) {
+                val details = (0 until errors.length())
+                    .mapNotNull { i ->
+                        errors.optJSONObject(i)?.optString("description")?.ifBlank { null }
+                    }
+                    .distinct()
+                if (details.isNotEmpty()) return details.joinToString("\n")
+            }
             json.optString("detail", json.optString("title", raw))
         } catch (_: Exception) {
             raw
