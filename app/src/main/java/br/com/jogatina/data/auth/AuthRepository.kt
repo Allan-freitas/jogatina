@@ -93,6 +93,6 @@ class AuthRepository(
          * O backend usa esse client para validar o ID token.
          * Troque pelo valor real do projeto antes de publicar.
          */
-        const val GOOGLE_SERVER_CLIENT_ID = "255695637830-na5rq49nnb2er3nfc24e8hmcgfjfupot.apps.googleusercontent.com"
+        const val GOOGLE_SERVER_CLIENT_ID = "255695637830-s99njkpa18spra0110jpll7diq4eatg.apps.googleusercontent.com"
     }
 }
