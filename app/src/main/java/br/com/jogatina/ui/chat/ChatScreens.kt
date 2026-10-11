@@ -363,14 +363,22 @@ fun ConversationScreen(
                     )
                 }
             } else {
+                val listState = androidx.compose.foundation.lazy.rememberLazyListState()
+                androidx.compose.runtime.LaunchedEffect(state.messages.size) {
+                    if (state.messages.isNotEmpty()) {
+                        listState.animateScrollToItem(0)
+                    }
+                }
                 LazyColumn(
                     modifier = Modifier
                         .fillMaxWidth()
                         .weight(1f),
+                    state = listState,
+                    reverseLayout = true,
                     verticalArrangement = Arrangement.spacedBy(6.dp),
                     contentPadding = PaddingValues(vertical = 8.dp)
                 ) {
-                    items(state.messages, key = { it.id }) { message ->
+                    items(state.messages.reversed(), key = { it.id }) { message ->
                         MessageBubble(
                             content = message.content,
                             time = message.sentOnUtc,
