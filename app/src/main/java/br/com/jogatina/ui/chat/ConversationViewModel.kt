@@ -69,6 +69,19 @@ class ConversationViewModel(
             if (id != null) {
                 loadHistory(id)
                 socket.markRead(id)
+            } else if (recipient != null) {
+                // Veio de "conversar": pode já existir conversa com esse amigo.
+                viewModelScope.launch {
+                    val existing = findConversation(recipient.friendId)
+                    if (existing != null) {
+                        conversationId = existing
+                        onConversationOpened(existing)
+                        loadHistory(existing)
+                        socket.markRead(existing)
+                    } else {
+                        _state.value = _state.value.copy(loadingHistory = false)
+                    }
+                }
             } else {
                 _state.value = _state.value.copy(loadingHistory = false)
             }
@@ -138,24 +151,29 @@ class ConversationViewModel(
         viewModelScope.launch {
             repeat(10) {
                 delay(600)
-                when (val r = chat.getConversations()) {
-                    is AuthResult.Success -> {
-                        val found = r.value.firstOrNull { c ->
-                            c.participants.any { it.userId == friendId }
-                        }
-                        if (found != null) {
-                            conversationId = found.conversationId
-                            onConversationOpened(found.conversationId)
-                            loadHistory(found.conversationId)
-                            socket.markRead(found.conversationId)
-                            return@launch
-                        }
-                    }
-                    is AuthResult.Error -> {
-                        handleError(r)
+                when (val found = findConversation(friendId)) {
+                    null -> Unit
+                    else -> {
+                        conversationId = found
+                        onConversationOpened(found)
+                        loadHistory(found)
+                        socket.markRead(found)
                         return@launch
                     }
                 }
+            }
+        }
+    }
+
+    private suspend fun findConversation(friendId: String): String? {
+        return when (val r = chat.getConversations()) {
+            is AuthResult.Success ->
+                r.value.firstOrNull { c ->
+                    c.participants.any { it.userId == friendId }
+                }?.conversationId
+            is AuthResult.Error -> {
+                handleError(r)
+                null
             }
         }
     }
