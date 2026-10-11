@@ -1,6 +1,13 @@
 package br.com.jogatina.ui.welcome
 
 import android.content.Context
+import android.graphics.BitmapFactory
+import androidx.compose.animation.core.RepeatMode
+import androidx.compose.animation.core.animateFloat
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.infiniteRepeatable
+import androidx.compose.animation.core.rememberInfiniteTransition
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
@@ -14,10 +21,12 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.navigationBarsPadding
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
@@ -28,6 +37,7 @@ import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -36,11 +46,17 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.FilterQuality
+import androidx.compose.ui.graphics.ImageBitmap
+import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.graphics.drawscope.rotate
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
@@ -49,6 +65,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
@@ -74,7 +91,10 @@ import br.com.jogatina.ui.theme.JogatinaWhite70
 import com.google.android.libraries.identity.googleid.GetGoogleIdOption
 import com.google.android.libraries.identity.googleid.GoogleIdTokenCredential
 import com.google.android.libraries.identity.googleid.GoogleIdTokenParsingException
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
+import kotlin.math.roundToInt
 
 /**
  * Tela de boas-vindas — segue o mockup:
@@ -211,6 +231,50 @@ fun WelcomeContent(
                 )
             )
     ) {
+        // Entrada (fade + subida) + idle do lutador (flutuar, respirar, halo, brilho).
+        var entered by remember { mutableStateOf(false) }
+        var enteredTexts by remember { mutableStateOf(false) }
+        LaunchedEffect(Unit) {
+            entered = true
+            kotlinx.coroutines.delay(200)
+            enteredTexts = true
+        }
+        val enterProgress by animateFloatAsState(
+            targetValue = if (entered) 1f else 0f,
+            animationSpec = tween(durationMillis = 900),
+            label = "enter"
+        )
+        val textsProgress by animateFloatAsState(
+            targetValue = if (enteredTexts) 1f else 0f,
+            animationSpec = tween(durationMillis = 700),
+            label = "enterTexts"
+        )
+        val idle = rememberInfiniteTransition(label = "fighterIdle")
+        val floatPx by idle.animateFloat(
+            initialValue = 0f,
+            targetValue = -26f,
+            animationSpec = infiniteRepeatable(tween(2200), RepeatMode.Reverse),
+            label = "float"
+        )
+        val breathe by idle.animateFloat(
+            initialValue = 1f,
+            targetValue = 1.03f,
+            animationSpec = infiniteRepeatable(tween(2200), RepeatMode.Reverse),
+            label = "breathe"
+        )
+        val haloAlpha by idle.animateFloat(
+            initialValue = 0.22f,
+            targetValue = 0.42f,
+            animationSpec = infiniteRepeatable(tween(2200), RepeatMode.Reverse),
+            label = "halo"
+        )
+        val shineX by idle.animateFloat(
+            initialValue = -1.2f,
+            targetValue = 1.2f,
+            animationSpec = infiniteRepeatable(tween(3800), RepeatMode.Restart),
+            label = "shine"
+        )
+
         Column(
             modifier = Modifier
                 .fillMaxSize()
@@ -225,6 +289,13 @@ fun WelcomeContent(
                 modifier = Modifier
                     .weight(1f, fill = true)
                     .fillMaxWidth()
+                    .graphicsLayer {
+                        translationY = (1f - enterProgress) * 120f
+                        val scale = 0.92f + 0.08f * enterProgress
+                        scaleX = scale
+                        scaleY = scale
+                        alpha = enterProgress
+                    }
             ) {
                 NeonStripes(
                     modifier = Modifier
@@ -232,15 +303,57 @@ fun WelcomeContent(
                         .height(320.dp)
                         .align(Alignment.TopCenter)
                 )
-                Image(
-                    painter = painterResource(R.drawable.fighter_pixel),
-                    contentDescription = stringResource(br.com.jogatina.R.string.fighter_desc),
-                    modifier = Modifier.fillMaxSize(),
-                    contentScale = ContentScale.Fit,
-                    alignment = Alignment.Center
+                Box(
+                    modifier = Modifier
+                        .size(280.dp)
+                        .align(Alignment.Center)
+                        .background(
+                            Brush.radialGradient(
+                                colors = listOf(
+                                    JogatinaMagenta.copy(alpha = haloAlpha),
+                                    JogatinaMagenta.copy(alpha = haloAlpha * 0.25f),
+                                    Color.Transparent
+                                )
+                            ),
+                            CircleShape
+                        )
                 )
+                // Lutador animado: guarda (k0) + chute alto a cada ~4s.
+                // (Fundo estático como fallback enquanto os frames carregam.)
+                FighterKickCycle(
+                    floatPx = floatPx,
+                    breathe = breathe,
+                    modifier = Modifier.fillMaxSize()
+                )
+                Canvas(modifier = Modifier.fillMaxSize()) {
+                    val w = size.width
+                    val h = size.height
+                    rotate(degrees = -18f, pivot = center) {
+                        val cx = center.x + shineX * w * 0.6f
+                        drawRect(
+                            brush = Brush.horizontalGradient(
+                                colors = listOf(
+                                    Color.Transparent,
+                                    Color.White.copy(alpha = 0.13f),
+                                    Color.Transparent
+                                ),
+                                startX = cx - 90f,
+                                endX = cx + 90f
+                            ),
+                            topLeft = Offset(0f, -h * 0.2f),
+                            size = Size(w, h * 1.4f)
+                        )
+                    }
+                }
             }
 
+            Column(
+                horizontalAlignment = Alignment.CenterHorizontally,
+                modifier = Modifier.graphicsLayer {
+                    alpha = textsProgress
+                    translationY = (1f - textsProgress) * 40f
+                }
+            ) {
             Text(
                 text = stringResource(br.com.jogatina.R.string.welcome_title),
                 color = JogatinaWhite,
@@ -259,6 +372,7 @@ fun WelcomeContent(
                 lineHeight = 19.sp,
                 modifier = Modifier.padding(horizontal = 12.dp)
             )
+            }
             Spacer(modifier = Modifier.height(26.dp))
 
             if (error != null) {
@@ -270,13 +384,11 @@ fun WelcomeContent(
                     modifier = Modifier.padding(bottom = 12.dp)
                 )
             }
-            GoogleEnterButton(
-                loading = loading,
-                onClick = { onClearError(); onGoogleEnter() }
-            )
+            // Botão Google oculto até o OAuth funcionar (fluxo mantido no código).
             Row(
                 horizontalArrangement = Arrangement.Center,
-                verticalAlignment = Alignment.CenterVertically
+                verticalAlignment = Alignment.CenterVertically,
+                modifier = Modifier.alpha(textsProgress)
             ) {
                 TextButton(onClick = { onShowEmail(EmailMode.LOGIN) }) {
                     Text(stringResource(br.com.jogatina.R.string.email_enter), color = JogatinaWhite70, fontSize = 13.sp)
@@ -354,6 +466,89 @@ private fun GoogleEnterButton(
 
 /** Painel de faixas angulares magenta neon atrás do lutador. */
 private data class Stripe(val x: Float, val y: Float, val thickness: Float, val alpha: Float)
+
+/**
+ * Lutador animado a partir da sprite sheet (fighter_k0..k7):
+ * guarda + chute alto a cada ~4s, pixel nítido (sem filtro).
+ */
+@Composable
+private fun FighterKickCycle(
+    floatPx: Float,
+    breathe: Float,
+    modifier: Modifier = Modifier
+) {
+    val context = LocalContext.current
+    val fighterDesc = stringResource(br.com.jogatina.R.string.fighter_desc)
+    var frames by remember { mutableStateOf<List<ImageBitmap>>(emptyList()) }
+    var kickFrame by remember { mutableStateOf<Int?>(null) }
+
+    LaunchedEffect(Unit) {
+        val loaded = withContext(Dispatchers.Default) {
+            FighterKickFrames.map { res ->
+                BitmapFactory.decodeResource(context.resources, res).asImageBitmap()
+            }
+        }
+        frames = loaded
+        while (true) {
+            kotlinx.coroutines.delay(4200)
+            for (f in 1..7) {
+                kickFrame = f
+                kotlinx.coroutines.delay(95)
+            }
+            kickFrame = null
+        }
+    }
+
+    val frameBitmap = kickFrame?.let { frames.getOrNull(it) }
+    if (frameBitmap != null) {
+        Image(
+            bitmap = frameBitmap,
+            contentDescription = fighterDesc,
+            modifier = modifier
+                .offset { IntOffset(0, floatPx.roundToInt()) }
+                .graphicsLayer {
+                    scaleX = breathe
+                    scaleY = breathe
+                },
+            contentScale = ContentScale.Fit,
+            alignment = Alignment.Center,
+            filterQuality = FilterQuality.None
+        )
+    } else if (frames.isNotEmpty()) {
+        Image(
+            bitmap = frames[0],
+            contentDescription = fighterDesc,
+            modifier = modifier
+                .offset { IntOffset(0, floatPx.roundToInt()) }
+                .graphicsLayer {
+                    scaleX = breathe
+                    scaleY = breathe
+                },
+            contentScale = ContentScale.Fit,
+            alignment = Alignment.Center,
+            filterQuality = FilterQuality.None
+        )
+    } else {
+        Image(
+            painter = painterResource(R.drawable.fighter_pixel),
+            contentDescription = fighterDesc,
+            modifier = modifier,
+            contentScale = ContentScale.Fit,
+            alignment = Alignment.Center
+        )
+    }
+}
+
+private val FighterKickFrames = listOf(
+    R.drawable.fighter_k0,
+    R.drawable.fighter_k1,
+    R.drawable.fighter_k2,
+    R.drawable.fighter_k3,
+    R.drawable.fighter_k4,
+    R.drawable.fighter_k5,
+    R.drawable.fighter_k6,
+    R.drawable.fighter_k7
+)
 
 @Composable
 private fun NeonStripes(modifier: Modifier = Modifier) {
