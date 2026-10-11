@@ -29,7 +29,9 @@ class NotificationsRepository(
                 title = o.optString("title"),
                 body = o.optString("body"),
                 isRead = o.optBoolean("isRead"),
-                createdOnUtc = o.optString("createdOnUtc")
+                createdOnUtc = o.optString("createdOnUtc"),
+                referenceType = o.optString("referenceType").ifBlank { null },
+                referenceId = o.optString("referenceId").ifBlank { null }
             )
         }
 }

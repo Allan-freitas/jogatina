@@ -53,6 +53,8 @@ Após o login o usuário cai no **Feed**, com saudação **"Olá, {nome}"**
   `friend_accepted`, `new_message`), filtro Todas/Não lidas, tap marca como
   lida (`PATCH notifications/{id}/read`), "ler todas"
   (`POST notifications/read-all`), auto-refresh a cada 60 s na tela.
+  Tocar numa notificação de **mensagem abre a conversa direto**
+  (`referenceId` da notificação).
 
 ## Chat
 

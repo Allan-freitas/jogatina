@@ -15,5 +15,11 @@ data class NotificationDto(
     val title: String,
     val body: String,
     val isRead: Boolean,
-    val createdOnUtc: String
-)
+    val createdOnUtc: String,
+    val referenceType: String?,
+    val referenceId: String?
+) {
+    /** Id da conversa quando for notificação de mensagem, ou null. */
+    val conversationId: String?
+        get() = referenceId.takeIf { type == "new_message" && !it.isNullOrBlank() }
+}

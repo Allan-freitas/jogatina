@@ -67,6 +67,7 @@ import br.com.jogatina.ui.theme.JogatinaWhite70
 fun NotificationsScreen(
     viewModel: NotificationsViewModel,
     onBack: () -> Unit,
+    onOpenConversation: (String) -> Unit = {},
     modifier: Modifier = Modifier
 ) {
     val state by viewModel.state.collectAsState()
@@ -163,7 +164,10 @@ fun NotificationsScreen(
                     items(state.visible, key = { it.id }) { notification ->
                         NotificationRow(
                             notification = notification,
-                            onClick = { viewModel.open(notification) }
+                            onClick = {
+                                viewModel.open(notification)
+                                notification.conversationId?.let { onOpenConversation(it) }
+                            }
                         )
                     }
                     item { Spacer(modifier = Modifier.height(12.dp)) }
@@ -256,7 +260,8 @@ private fun NotificationRowPreview() {
                     id = "1", type = "friend_request",
                     title = "Novo pedido de amizade",
                     body = "Ana quer jogar com você",
-                    isRead = false, createdOnUtc = ""
+                    isRead = false, createdOnUtc = "",
+                    referenceType = null, referenceId = null
                 ),
                 onClick = {}
             )

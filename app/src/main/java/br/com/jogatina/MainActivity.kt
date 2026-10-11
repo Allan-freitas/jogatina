@@ -295,6 +295,11 @@ fun JogatinaApp(
                             showNotifications = false
                             notificationsViewModel.refresh()
                         },
+                        onOpenConversation = {
+                            showNotifications = false
+                            openConversationId = it
+                            newChatFriend = null
+                        },
                         modifier = Modifier.padding(innerPadding)
                     )
                 }
