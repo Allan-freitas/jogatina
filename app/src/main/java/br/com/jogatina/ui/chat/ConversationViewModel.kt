@@ -99,7 +99,7 @@ class ConversationViewModel(
             _state.value = _state.value.copy(error = appContext.getString(R.string.chat_offline))
             return
         }
-        _state.value = _state.value.copy(sending = true)
+        _state.value = _state.value.copy(sending = true, error = null)
         val id = conversationId
         val ok = if (id != null) {
             socket.sendMessage(conversationId = id, recipientId = null, content = text)
@@ -136,7 +136,8 @@ class ConversationViewModel(
                 is AuthResult.Success ->
                     _state.value = _state.value.copy(
                         messages = merge(_state.value.messages, r.value),
-                        loadingHistory = false
+                        loadingHistory = false,
+                        error = null
                     )
                 is AuthResult.Error -> {
                     _state.value = _state.value.copy(loadingHistory = false)

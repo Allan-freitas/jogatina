@@ -88,6 +88,7 @@ class ChatSocket(
     private fun send(text: String): Boolean {
         val s = socket ?: return false
         return try {
+            Log.d(TAG, "→ ${text.take(200)}")
             s.send(text)
         } catch (e: Exception) {
             Log.e(TAG, "send falhou: ${e.message}")
@@ -137,6 +138,7 @@ class ChatSocket(
 
         override fun onMessage(webSocket: WebSocket, text: String) {
             scope.launch {
+                Log.d(TAG, "← ${text.take(200)}")
                 try {
                     val json = JSONObject(text)
                     when (json.optString("type")) {
