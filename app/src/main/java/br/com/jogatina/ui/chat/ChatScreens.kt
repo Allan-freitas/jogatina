@@ -8,10 +8,10 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -43,6 +43,7 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringResource
@@ -299,9 +300,11 @@ fun ConversationScreen(
     viewModel: ConversationViewModel,
     title: String,
     onBack: () -> Unit,
+    bottomLift: androidx.compose.ui.unit.Dp = 0.dp,
     modifier: Modifier = Modifier
 ) {
     val state by viewModel.state.collectAsState()
+    val activity = androidx.compose.ui.platform.LocalContext.current as? android.app.Activity
 
     DisposableEffect(Unit) {
         onDispose { /* socket fecha no onCleared do ViewModel */ }
@@ -309,6 +312,9 @@ fun ConversationScreen(
 
     Scaffold(
         modifier = modifier.fillMaxSize(),
+        // O Scaffold externo (JogatinaApp) já consome os insets do sistema;
+        // reaplicar aqui duplicava o padding inferior (o vão gigante).
+        contentWindowInsets = WindowInsets(0, 0, 0, 0),
         topBar = {
             TopAppBar(
                 title = {
@@ -382,7 +388,8 @@ fun ConversationScreen(
                         MessageBubble(
                             content = message.content,
                             time = message.sentOnUtc,
-                            mine = viewModel.myUserId != null && message.senderId.equals(viewModel.myUserId, ignoreCase = true)
+                            mine = viewModel.myUserId != null && message.senderId.equals(viewModel.myUserId, ignoreCase = true),
+                            dim = message.id.startsWith("pending:")
                         )
                     }
                 }
@@ -392,7 +399,9 @@ fun ConversationScreen(
                 verticalAlignment = Alignment.CenterVertically,
                 modifier = Modifier
                     .padding(vertical = 8.dp)
-                    .imePadding()
+                    // Altura exata calculada na Activity (teclado menos o que
+                    // o padding externo já cobre): sem chute, sem vão.
+                    .padding(bottom = bottomLift)
             ) {
                 OutlinedTextField(
                     value = state.input,
@@ -422,9 +431,11 @@ fun ConversationScreen(
 }
 
 @Composable
-private fun MessageBubble(content: String, time: String, mine: Boolean) {
+private fun MessageBubble(content: String, time: String, mine: Boolean, dim: Boolean = false) {
     Row(
-        modifier = Modifier.fillMaxWidth(),
+        modifier = Modifier
+            .fillMaxWidth()
+            .alpha(if (dim) 0.6f else 1f),
         horizontalArrangement = if (mine) Arrangement.End else Arrangement.Start
     ) {
         Column(

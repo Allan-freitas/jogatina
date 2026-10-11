@@ -21,12 +21,21 @@ import kotlinx.coroutines.launch
 
 data class ConversationUiState(
     val messages: List<ChatMessageDto> = emptyList(),
+    /** Enviadas ainda não confirmadas pelo servidor (exibidas com leve transparência). */
+    val pending: List<PendingSend> = emptyList(),
     val loadingHistory: Boolean = true,
     val error: String? = null,
     val input: String = "",
     val sending: Boolean = false,
     val connected: Boolean = false,
     val connectionInfo: String = ""
+)
+
+data class PendingSend(
+    val tempId: String = java.util.UUID.randomUUID().toString(),
+    val content: String,
+    val senderId: String?,
+    val sentOnUtc: String = java.time.Instant.now().toString()
 )
 
 class ConversationViewModel(
@@ -112,9 +121,20 @@ class ConversationViewModel(
             _state.value = _state.value.copy(sending = false, error = appContext.getString(R.string.chat_send_failed))
             return
         }
-        _state.value = _state.value.copy(input = "", sending = false)
-        // O servidor não ecoa para a conexão que enviou: recarrega para
-        // exibir a própria mensagem com o id real (sem duplicar).
+        // Otimista: aparece na hora; o reload a seguir reconcilia com o id real.
+        val pending = PendingSend(content = text, senderId = myUserId)
+        _state.value = _state.value.copy(
+            input = "",
+            sending = false,
+            messages = _state.value.messages + ChatMessageDto(
+                id = "pending:${pending.tempId}",
+                conversationId = conversationId.orEmpty(),
+                senderId = myUserId.orEmpty(),
+                content = text,
+                sentOnUtc = pending.sentOnUtc
+            ),
+            pending = _state.value.pending + pending
+        )
         conversationId?.let { loadHistory(it) }
         if (conversationId == null && recipient != null) {
             resolveNewConversation(recipient.friendId)
@@ -133,12 +153,33 @@ class ConversationViewModel(
         _state.value = _state.value.copy(loadingHistory = true, error = null)
         viewModelScope.launch {
             when (val r = chat.getMessages(id)) {
-                is AuthResult.Success ->
+                is AuthResult.Success -> {
+                    val server = merge(
+                        _state.value.messages.filterNot { it.id.startsWith("pending:") },
+                        r.value
+                    )
+                    // Casa pendentes 1-a-1 com o servidor; o que não casou continua visível.
+                    val pool = server.toMutableList()
+                    val stillPending = mutableListOf<PendingSend>()
+                    for (p in _state.value.pending) {
+                        val i = pool.indexOfFirst { it.senderId == p.senderId && it.content == p.content }
+                        if (i >= 0) pool.removeAt(i) else stillPending.add(p)
+                    }
                     _state.value = _state.value.copy(
-                        messages = merge(_state.value.messages, r.value),
+                        messages = server + stillPending.map {
+                            ChatMessageDto(
+                                id = "pending:${it.tempId}",
+                                conversationId = conversationId.orEmpty(),
+                                senderId = it.senderId.orEmpty(),
+                                content = it.content,
+                                sentOnUtc = it.sentOnUtc
+                            )
+                        },
+                        pending = stillPending,
                         loadingHistory = false,
                         error = null
                     )
+                }
                 is AuthResult.Error -> {
                     _state.value = _state.value.copy(loadingHistory = false)
                     handleError(r)

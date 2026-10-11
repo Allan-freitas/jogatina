@@ -11,11 +11,15 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.asPaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.ime
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -276,6 +280,12 @@ fun JogatinaApp(
                             newChatFriend = null
                             chatListViewModel?.refresh()
                         },
+                        bottomLift = androidx.compose.foundation.layout.WindowInsets.ime
+                            .asPaddingValues()
+                            .let { ime ->
+                                val need = ime.calculateBottomPadding() - innerPadding.calculateBottomPadding()
+                                if (need > 0.dp) need else 0.dp
+                            },
                         modifier = Modifier.padding(innerPadding)
                     )
                 }
