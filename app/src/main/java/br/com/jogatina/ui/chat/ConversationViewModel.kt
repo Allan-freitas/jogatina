@@ -48,6 +48,7 @@ class ConversationViewModel(
     val state: StateFlow<ConversationUiState> = _state.asStateFlow()
 
     private var conversationId: String? = initialConversationId
+    private var everConnected = false
     private val socket = ChatSocket(
         baseUrl,
         viewModelScope,
@@ -99,6 +100,9 @@ class ConversationViewModel(
             return
         }
         _state.value = _state.value.copy(input = "", sending = false)
+        // O servidor não ecoa para a conexão que enviou: recarrega para
+        // exibir a própria mensagem com o id real (sem duplicar).
+        conversationId?.let { loadHistory(it) }
         if (conversationId == null && recipient != null) {
             resolveNewConversation(recipient.friendId)
         }
@@ -158,11 +162,14 @@ class ConversationViewModel(
 
     private fun onEvent(event: ChatEvent) {
         when (event) {
-            is ChatEvent.Connected ->
-                _state.value = _state.value.copy(
-                    connected = true,
-                    connectionInfo = appContext.getString(R.string.chat_online)
-                )
+            is ChatEvent.Connected -> {
+                _state.value = _state.value.copy(connected = true, connectionInfo = appContext.getString(R.string.chat_online))
+                // Reconexão (offline -> online): busca o que chegou nesse meio tempo.
+                if (everConnected) {
+                    conversationId?.let { loadHistory(it) }
+                }
+                everConnected = true
+            }
             is ChatEvent.Disconnected ->
                 _state.value = _state.value.copy(
                     connected = false,
