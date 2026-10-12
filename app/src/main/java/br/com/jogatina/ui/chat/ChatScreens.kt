@@ -23,6 +23,8 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.Send
 import androidx.compose.material.icons.filled.AddComment
+import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.Image
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material3.Badge
 import androidx.compose.material3.Card
@@ -31,8 +33,6 @@ import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
-import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
@@ -46,6 +46,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -53,6 +55,9 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
+import coil.compose.AsyncImage
 import br.com.jogatina.data.chat.ConversationDto
 import br.com.jogatina.data.social.FriendDto
 import br.com.jogatina.ui.feed.timeAgo
@@ -193,8 +198,9 @@ private fun ConversationRow(
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis
                 )
+                val preview = conversation.lastMessage?.content?.let { lastPreviewText(it) }
                 Text(
-                    conversation.lastMessage?.content ?: stringResource(br.com.jogatina.R.string.say_hi),
+                    preview ?: stringResource(br.com.jogatina.R.string.say_hi),
                     color = JogatinaWhite70,
                     fontSize = 13.sp,
                     maxLines = 1,
@@ -304,7 +310,6 @@ fun ConversationScreen(
     modifier: Modifier = Modifier
 ) {
     val state by viewModel.state.collectAsState()
-    val activity = androidx.compose.ui.platform.LocalContext.current as? android.app.Activity
 
     DisposableEffect(Unit) {
         onDispose { /* socket fecha no onCleared do ViewModel */ }
@@ -346,6 +351,21 @@ fun ConversationScreen(
         },
         containerColor = JogatinaNavyBottom
     ) { padding ->
+        val context = LocalContext.current
+        val pickGallery = rememberLauncherForActivityResult(ActivityResultContracts.GetContent()) { uri: android.net.Uri? ->
+            if (uri == null) return@rememberLauncherForActivityResult
+            try {
+                val resolver = context.contentResolver
+                val mime = resolver.getType(uri) ?: "image/jpeg"
+                resolver.openInputStream(uri)?.use { input ->
+                    val bytes = input.readBytes()
+                    if (bytes.size > 5 * 1024 * 1024) return@rememberLauncherForActivityResult
+                    viewModel.onImagePicked(PickedChatImage(bytes, mime, uri))
+                }
+            } catch (_: Exception) {
+            }
+        }
+
         Column(
             modifier = Modifier
                 .fillMaxSize()
@@ -389,8 +409,49 @@ fun ConversationScreen(
                             content = message.content,
                             time = message.sentOnUtc,
                             mine = viewModel.myUserId != null && message.senderId.equals(viewModel.myUserId, ignoreCase = true),
-                            dim = message.id.startsWith("pending:")
+                            dim = message.id.startsWith("pending:"),
+                            resolveImageUrl = viewModel::fullImageUrl
                         )
+                    }
+                }
+            }
+
+            // Preview do anexo (galeria ou GIF/figurinha do teclado) antes de enviar.
+            val picked = state.pickedImage
+            if (picked != null) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(top = 4.dp)
+                        .clip(RoundedCornerShape(12.dp))
+                        .background(JogatinaNavyMid)
+                        .padding(8.dp)
+                ) {
+                    AsyncImage(
+                        model = picked.previewUri ?: picked.bytes,
+                        contentDescription = stringResource(br.com.jogatina.R.string.attached_image),
+                        contentScale = ContentScale.Crop,
+                        modifier = Modifier
+                            .size(56.dp)
+                            .clip(RoundedCornerShape(10.dp))
+                    )
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text(
+                        if (state.uploadingImage) stringResource(br.com.jogatina.R.string.chat_uploading)
+                        else stringResource(br.com.jogatina.R.string.attached_image),
+                        color = JogatinaWhite70, fontSize = 13.sp,
+                        modifier = Modifier.weight(1f)
+                    )
+                    if (state.uploadingImage) {
+                        CircularProgressIndicator(
+                            color = JogatinaMagenta, strokeWidth = 2.dp,
+                            modifier = Modifier.size(20.dp)
+                        )
+                    } else {
+                        IconButton(onClick = { viewModel.onImagePicked(null) }) {
+                            Icon(Icons.Filled.Close, contentDescription = stringResource(br.com.jogatina.R.string.remove_image), tint = JogatinaWhite)
+                        }
                     }
                 }
             }
@@ -403,20 +464,22 @@ fun ConversationScreen(
                     // o padding externo já cobre): sem chute, sem vão.
                     .padding(bottom = bottomLift)
             ) {
-                OutlinedTextField(
+                IconButton(
+                    onClick = { pickGallery.launch("image/*") },
+                    enabled = !state.sending
+                ) {
+                    Icon(Icons.Filled.Image, contentDescription = stringResource(br.com.jogatina.R.string.attach_image), tint = JogatinaMagenta)
+                }
+                ChatMessageInput(
                     value = state.input,
                     onValueChange = viewModel::onInputChange,
-                    placeholder = { Text(stringResource(br.com.jogatina.R.string.message_hint), color = JogatinaWhite70, fontSize = 14.sp) },
-                    modifier = Modifier.weight(1f),
-                    maxLines = 4,
-                    shape = RoundedCornerShape(24.dp),
-                    colors = OutlinedTextFieldDefaults.colors(
-                        focusedTextColor = JogatinaWhite,
-                        unfocusedTextColor = JogatinaWhite,
-                        focusedBorderColor = JogatinaMagenta,
-                        unfocusedBorderColor = JogatinaWhite.copy(alpha = 0.25f),
-                        cursorColor = JogatinaMagenta
-                    )
+                    onCommitImage = { bytes, mime, uri ->
+                        viewModel.onImagePicked(PickedChatImage(bytes, mime, uri))
+                    },
+                    onSendAction = viewModel::send,
+                    placeholder = stringResource(br.com.jogatina.R.string.message_hint),
+                    enabled = !state.sending,
+                    modifier = Modifier.weight(1f)
                 )
                 IconButton(onClick = viewModel::send, enabled = !state.sending) {
                     if (state.sending) {
@@ -430,8 +493,43 @@ fun ConversationScreen(
     }
 }
 
+/** Divide o conteúdo em texto + URLs de imagem (convenção: imageUrl enviada no corpo). */
+private fun splitChatContent(content: String): Pair<String, List<String>> {
+    val tokens = content.split("\\s+".toRegex())
+    val images = tokens.filter { isImageToken(it) }
+    val text = tokens.filterNot { isImageToken(it) }.joinToString(" ").trim()
+    return text to images
+}
+
+private fun isImageToken(token: String): Boolean {
+    val t = token.trim().trim('"', '\'', '(', ')', ',', ';')
+    if (t.isBlank()) return false
+    val lower = t.lowercase()
+    val looksPath = t.startsWith("/uploads/") || t.startsWith("/chat-images/") || t.startsWith("/chat/") ||
+        lower.startsWith("http://") || lower.startsWith("https://")
+    if (!looksPath) return false
+    return lower.contains(".jpg") || lower.contains(".jpeg") || lower.contains(".png") ||
+        lower.contains(".gif") || lower.contains(".webp") ||
+        t.startsWith("/uploads/") || t.startsWith("/chat-images/") || t.startsWith("/chat/")
+}
+
 @Composable
-private fun MessageBubble(content: String, time: String, mine: Boolean, dim: Boolean = false) {
+private fun lastPreviewText(content: String): String {
+    val (text, images) = splitChatContent(content)
+    if (text.isNotBlank()) return text
+    if (images.isNotEmpty()) return stringResource(br.com.jogatina.R.string.chat_image_label)
+    return content
+}
+
+@Composable
+private fun MessageBubble(
+    content: String,
+    time: String,
+    mine: Boolean,
+    dim: Boolean = false,
+    resolveImageUrl: (String) -> String? = { it }
+) {
+    val (text, imageTokens) = splitChatContent(content)
     Row(
         modifier = Modifier
             .fillMaxWidth()
@@ -444,7 +542,21 @@ private fun MessageBubble(content: String, time: String, mine: Boolean, dim: Boo
                 .background(if (mine) JogatinaMagenta else JogatinaNavyMid)
                 .padding(horizontal = 12.dp, vertical = 8.dp)
         ) {
-            Text(content, color = JogatinaWhite, fontSize = 14.sp)
+            if (text.isNotBlank()) {
+                Text(text, color = JogatinaWhite, fontSize = 14.sp)
+            }
+            imageTokens.forEach { token ->
+                val url = resolveImageUrl(token) ?: token
+                Spacer(modifier = Modifier.height(if (text.isNotBlank()) 6.dp else 2.dp))
+                AsyncImage(
+                    model = url,
+                    contentDescription = stringResource(br.com.jogatina.R.string.chat_image_label),
+                    contentScale = ContentScale.Crop,
+                    modifier = Modifier
+                        .size(width = 200.dp, height = 160.dp)
+                        .clip(RoundedCornerShape(10.dp))
+                )
+            }
             Text(
                 timeAgo(time),
                 color = if (mine) JogatinaWhite.copy(alpha = 0.8f) else JogatinaSubtitle,

@@ -17,6 +17,30 @@ class ChatRepository(
         api.get("chat/conversations/$conversationId/messages?page=$page&pageSize=$pageSize", token())
             .map { raw -> parseMessages(JSONArray(raw)) }
 
+    fun imageUrl(relative: String?): String? =
+        relative?.takeIf { it.isNotBlank() && !it.equals("null", ignoreCase = true) }
+            ?.let {
+                if (it.startsWith("http://") || it.startsWith("https://")) it
+                else api.baseUrl.trimEnd('/') + it
+            }
+
+    /**
+     * Hospeda imagem do chat (teclado GIF/figurinha ou galeria).
+     * `POST chat/images` multipart `file` (JPEG/PNG/WebP/GIF ≤ 5 MB) -> `{ "imageUrl": "/chat-images/..." }`.
+     * A URL relativa retornada é enviada como [content] via WS `send`.
+     */
+    suspend fun uploadImage(bytes: ByteArray, mimeType: String): AuthResult<String> {
+        val ext = when (mimeType.lowercase()) {
+            "image/png" -> "png"
+            "image/webp" -> "webp"
+            "image/gif" -> "gif"
+            else -> "jpg"
+        }
+        return api.upload("chat/images", bytes, "upload.$ext", mimeType, token()).map { raw ->
+            JSONObject(raw).getString("imageUrl")
+        }
+    }
+
     private fun parseConversations(array: JSONArray): List<ConversationDto> =
         List(array.length()) { i ->
             val o = array.getJSONObject(i)

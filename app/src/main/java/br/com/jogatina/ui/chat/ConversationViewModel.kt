@@ -1,6 +1,7 @@
 package br.com.jogatina.ui.chat
 
 import android.content.Context
+import android.net.Uri
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
@@ -27,9 +28,31 @@ data class ConversationUiState(
     val error: String? = null,
     val input: String = "",
     val sending: Boolean = false,
+    /** Imagem anexada (galeria ou GIF/figurinha do teclado), ainda não enviada. */
+    val pickedImage: PickedChatImage? = null,
+    val uploadingImage: Boolean = false,
     val connected: Boolean = false,
     val connectionInfo: String = ""
 )
+
+/** Bytes já lidos do content:// (teclado ou galeria) + Uri de preview local. */
+data class PickedChatImage(
+    val bytes: ByteArray,
+    val mimeType: String,
+    val previewUri: Uri? = null
+) {
+    override fun equals(other: Any?): Boolean {
+        if (this === other) return true
+        if (other !is PickedChatImage) return false
+        return mimeType == other.mimeType && previewUri == other.previewUri && bytes.contentEquals(other.bytes)
+    }
+    override fun hashCode(): Int {
+        var result = bytes.contentHashCode()
+        result = 31 * result + mimeType.hashCode()
+        result = 31 * result + (previewUri?.hashCode() ?: 0)
+        return result
+    }
+}
 
 data class PendingSend(
     val tempId: String = java.util.UUID.randomUUID().toString(),
@@ -101,13 +124,29 @@ class ConversationViewModel(
         _state.value = _state.value.copy(input = text)
     }
 
+    fun onImagePicked(image: PickedChatImage?) {
+        _state.value = _state.value.copy(pickedImage = image, error = null)
+    }
+
+    /** URL absoluta para exibir imagens hospedadas (content = imageUrl relativa). */
+    fun fullImageUrl(relative: String?): String? = chat.imageUrl(relative)
+
     fun send() {
         val text = _state.value.input.trim()
-        if (text.isBlank() || _state.value.sending) return
+        val image = _state.value.pickedImage
+        if ((text.isBlank() && image == null) || _state.value.sending) return
         if (!socket.isConnected) {
             _state.value = _state.value.copy(error = appContext.getString(R.string.chat_offline))
             return
         }
+        if (image != null) {
+            sendWithImage(text, image)
+        } else {
+            sendText(text)
+        }
+    }
+
+    private fun sendText(text: String) {
         _state.value = _state.value.copy(sending = true, error = null)
         val id = conversationId
         val ok = if (id != null) {
@@ -138,6 +177,56 @@ class ConversationViewModel(
         conversationId?.let { loadHistory(it) }
         if (conversationId == null && recipient != null) {
             resolveNewConversation(recipient.friendId)
+        }
+    }
+
+    private fun sendWithImage(caption: String, image: PickedChatImage) {
+        _state.value = _state.value.copy(sending = true, uploadingImage = true, error = null)
+        viewModelScope.launch {
+            when (val up = chat.uploadImage(image.bytes, image.mimeType)) {
+                is AuthResult.Success -> {
+                    val imageUrl = up.value
+                    val content = if (caption.isBlank()) imageUrl else "$caption\n$imageUrl"
+                    val id = conversationId
+                    val ok = if (id != null) {
+                        socket.sendMessage(conversationId = id, recipientId = null, content = content)
+                    } else {
+                        val r = recipient
+                        if (r == null) false
+                        else socket.sendMessage(conversationId = null, recipientId = r.friendId, content = content)
+                    }
+                    if (!ok) {
+                        _state.value = _state.value.copy(
+                            sending = false, uploadingImage = false,
+                            error = appContext.getString(R.string.chat_send_failed)
+                        )
+                        return@launch
+                    }
+                    val pending = PendingSend(content = content, senderId = myUserId)
+                    _state.value = _state.value.copy(
+                        input = "",
+                        pickedImage = null,
+                        sending = false,
+                        uploadingImage = false,
+                        messages = _state.value.messages + ChatMessageDto(
+                            id = "pending:${pending.tempId}",
+                            conversationId = conversationId.orEmpty(),
+                            senderId = myUserId.orEmpty(),
+                            content = content,
+                            sentOnUtc = pending.sentOnUtc
+                        ),
+                        pending = _state.value.pending + pending
+                    )
+                    conversationId?.let { loadHistory(it) }
+                    if (conversationId == null && recipient != null) {
+                        resolveNewConversation(recipient.friendId)
+                    }
+                }
+                is AuthResult.Error -> {
+                    _state.value = _state.value.copy(sending = false, uploadingImage = false)
+                    handleError(up)
+                }
+            }
         }
     }
 

@@ -148,6 +148,8 @@
     <string name="chat_reconnecting">Reconectando...</string>
     <string name="chat_offline">Sem conexão. Aguarde reconectar.</string>
     <string name="chat_send_failed">Não foi possível enviar.</string>
+    <string name="chat_image_label">[Imagem]</string>
+    <string name="chat_uploading">Enviando imagem...</string>
     <string name="notifications">Notificações</string>
     <string name="comments">Comentários</string>
     <string name="react">Reagir</string>
