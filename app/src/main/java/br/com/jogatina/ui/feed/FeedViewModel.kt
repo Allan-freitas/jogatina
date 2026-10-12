@@ -35,6 +35,7 @@ data class FeedUiState(
     val expanded: Set<String> = emptySet(),
     val commentsLoading: Set<String> = emptySet(),
     val commentInputs: Map<String, String> = emptyMap(),
+    val commentImages: Map<String, PickedImage?> = emptyMap(),
     val replyTo: Map<String, CommentDto?> = emptyMap(),
     val reacting: Set<String> = emptySet(),
     val reactionPickerFor: String? = null,
@@ -223,20 +224,42 @@ class FeedViewModel(
         )
     }
 
+    /** Anexa (ou limpa, com null) a imagem/GIF de um comentário ainda não enviado. */
+    fun onCommentImagePicked(postId: String, image: PickedImage?) {
+        _state.value = _state.value.copy(
+            commentImages = _state.value.commentImages + (postId to image)
+        )
+    }
+
     fun setReplyTo(postId: String, parent: CommentDto?) {
         _state.value = _state.value.copy(replyTo = _state.value.replyTo + (postId to parent))
     }
 
     fun submitComment(postId: String) {
-        val text = (_state.value.commentInputs[postId] ?: "").trim()
-        if (text.isBlank() || _state.value.sendingComment.contains(postId)) return
-        val parent = _state.value.replyTo[postId]
-        _state.value = _state.value.copy(sendingComment = _state.value.sendingComment + postId)
+        val current = _state.value
+        val text = (current.commentInputs[postId] ?: "").trim()
+        val image = current.commentImages[postId]
+        if ((text.isBlank() && image == null) || current.sendingComment.contains(postId)) return
+        val parent = current.replyTo[postId]
+        _state.value = current.copy(sendingComment = current.sendingComment + postId)
         viewModelScope.launch {
-            when (val r = feed.addComment(postId, text, parent?.id)) {
+            var content = text
+            if (image != null) {
+                when (val up = feed.uploadImage(image.bytes, image.mimeType)) {
+                    is AuthResult.Success ->
+                        content = if (text.isBlank()) up.value else "$text\n${up.value}"
+                    is AuthResult.Error -> {
+                        _state.value = _state.value.copy(sendingComment = _state.value.sendingComment - postId)
+                        handleError(up)
+                        return@launch
+                    }
+                }
+            }
+            when (val r = feed.addComment(postId, content, parent?.id)) {
                 is AuthResult.Success ->
                     _state.value = _state.value.copy(
                         commentInputs = _state.value.commentInputs + (postId to ""),
+                        commentImages = _state.value.commentImages + (postId to null),
                         replyTo = _state.value.replyTo + (postId to null),
                         sendingComment = _state.value.sendingComment - postId,
                         posts = _state.value.posts.map { p ->

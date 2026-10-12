@@ -95,6 +95,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import kotlin.math.roundToInt
+import kotlin.time.Duration.Companion.milliseconds
 
 /**
  * Tela de boas-vindas — segue o mockup:
@@ -113,15 +114,17 @@ fun WelcomeScreen(
     val state by viewModel.state.collectAsState()
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
+    val gerrUnavailableFmt = stringResource(R.string.gerr_unavailable)
+    val gerrFailedFmt = stringResource(R.string.gerr_failed)
     val googleStrings = GoogleUiStrings(
-        token = stringResource(br.com.jogatina.R.string.gerr_token),
-        invalid = stringResource(br.com.jogatina.R.string.gerr_invalid),
-        cancelled = stringResource(br.com.jogatina.R.string.gerr_cancelled),
-        none = stringResource(br.com.jogatina.R.string.gerr_none),
-        unsupported = stringResource(br.com.jogatina.R.string.gerr_unsupported),
-        interrupted = stringResource(br.com.jogatina.R.string.gerr_interrupted),
-        unavailable = { type -> context.getString(br.com.jogatina.R.string.gerr_unavailable, type ?: "?") },
-        failed = { msg -> context.getString(br.com.jogatina.R.string.gerr_failed, msg) }
+        token = stringResource(R.string.gerr_token),
+        invalid = stringResource(R.string.gerr_invalid),
+        cancelled = stringResource(R.string.gerr_cancelled),
+        none = stringResource(R.string.gerr_none),
+        unsupported = stringResource(R.string.gerr_unsupported),
+        interrupted = stringResource(R.string.gerr_interrupted),
+        unavailable = { type -> String.format(gerrUnavailableFmt, type ?: "?") },
+        failed = { msg -> String.format(gerrFailedFmt, msg) }
     )
 
     WelcomeContent(
@@ -185,7 +188,7 @@ private suspend fun signInWithGoogle(context: Context, viewModel: WelcomeViewMod
     } catch (e: GoogleIdTokenParsingException) {
         Log.e(TAG_GOOGLE, "parsing", e)
         viewModel.onSocialError(strings.invalid)
-    } catch (e: GetCredentialCancellationException) {
+    } catch (_: GetCredentialCancellationException) {
         Log.d(TAG_GOOGLE, "cancelado pelo usuário")
         viewModel.onSocialError(strings.cancelled)
     } catch (e: NoCredentialException) {
@@ -208,6 +211,7 @@ private suspend fun signInWithGoogle(context: Context, viewModel: WelcomeViewMod
 
 private const val TAG_GOOGLE = "JogatinaGoogle"
 
+@Suppress("UNUSED_PARAMETER")
 @Composable
 fun WelcomeContent(
     loading: Boolean,
@@ -236,7 +240,7 @@ fun WelcomeContent(
         var enteredTexts by remember { mutableStateOf(false) }
         LaunchedEffect(Unit) {
             entered = true
-            kotlinx.coroutines.delay(200)
+            kotlinx.coroutines.delay(200.milliseconds)
             enteredTexts = true
         }
         val enterProgress by animateFloatAsState(
@@ -355,7 +359,7 @@ fun WelcomeContent(
                 }
             ) {
             Text(
-                text = stringResource(br.com.jogatina.R.string.welcome_title),
+                text = stringResource(R.string.welcome_title),
                 color = JogatinaWhite,
                 fontSize = 26.sp,
                 fontWeight = FontWeight.Bold,
@@ -364,7 +368,7 @@ fun WelcomeContent(
             )
             Spacer(modifier = Modifier.height(10.dp))
             Text(
-                text = stringResource(br.com.jogatina.R.string.welcome_subtitle),
+                text = stringResource(R.string.welcome_subtitle),
                 color = JogatinaSubtitle,
                 fontSize = 13.sp,
                 fontWeight = FontWeight.Normal,
@@ -391,11 +395,11 @@ fun WelcomeContent(
                 modifier = Modifier.alpha(textsProgress)
             ) {
                 TextButton(onClick = { onShowEmail(EmailMode.LOGIN) }) {
-                    Text(stringResource(br.com.jogatina.R.string.email_enter), color = JogatinaWhite70, fontSize = 13.sp)
+                    Text(stringResource(R.string.email_enter), color = JogatinaWhite70, fontSize = 13.sp)
                 }
                 Text("•", color = JogatinaWhite70, fontSize = 13.sp)
                 TextButton(onClick = { onShowEmail(EmailMode.REGISTER) }) {
-                    Text(stringResource(br.com.jogatina.R.string.create_account), color = JogatinaWhite, fontSize = 13.sp)
+                    Text(stringResource(R.string.create_account), color = JogatinaWhite, fontSize = 13.sp)
                 }
             }
         }
@@ -414,6 +418,7 @@ fun WelcomeContent(
 }
 
 /** Botão branco padrão Google: logo "G" colorido + "Entrar com Google". */
+@Suppress("unused")
 @Composable
 private fun GoogleEnterButton(
     loading: Boolean,
@@ -454,7 +459,7 @@ private fun GoogleEnterButton(
                 )
                 Spacer(modifier = Modifier.width(12.dp))
                 Text(
-                    text = stringResource(br.com.jogatina.R.string.google_enter),
+                    text = stringResource(R.string.google_enter),
                     fontSize = 15.sp,
                     fontWeight = FontWeight.SemiBold,
                     color = Color(0xFF1F1F1F)
@@ -471,6 +476,7 @@ private data class Stripe(val x: Float, val y: Float, val thickness: Float, val 
  * Lutador animado a partir da sprite sheet (fighter_k0..k7):
  * guarda + chute alto a cada ~4s, pixel nítido (sem filtro).
  */
+@Suppress("ContextGetResources", "LocalContextResources")
 @Composable
 private fun FighterKickCycle(
     floatPx: Float,
@@ -478,22 +484,23 @@ private fun FighterKickCycle(
     modifier: Modifier = Modifier
 ) {
     val context = LocalContext.current
-    val fighterDesc = stringResource(br.com.jogatina.R.string.fighter_desc)
+    val fighterDesc = stringResource(R.string.fighter_desc)
     var frames by remember { mutableStateOf<List<ImageBitmap>>(emptyList()) }
     var kickFrame by remember { mutableStateOf<Int?>(null) }
 
-    LaunchedEffect(Unit) {
+    LaunchedEffect(context) {
         val loaded = withContext(Dispatchers.Default) {
+            val resources = context.resources
             FighterKickFrames.map { res ->
-                BitmapFactory.decodeResource(context.resources, res).asImageBitmap()
+                BitmapFactory.decodeResource(resources, res).asImageBitmap()
             }
         }
         frames = loaded
         while (true) {
-            kotlinx.coroutines.delay(4200)
+            kotlinx.coroutines.delay(4200.milliseconds)
             for (f in 1..7) {
                 kickFrame = f
-                kotlinx.coroutines.delay(95)
+                kotlinx.coroutines.delay(95.milliseconds)
             }
             kickFrame = null
         }
@@ -567,12 +574,12 @@ private fun NeonStripes(modifier: Modifier = Modifier) {
                 drawRect(
                     color = JogatinaMagenta.copy(alpha = 0.25f),
                     topLeft = Offset(x - 10, y - 10),
-                    size = androidx.compose.ui.geometry.Size(w * 1.2f, thickness + 20)
+                    size = Size(w * 1.2f, thickness + 20)
                 )
                 drawRect(
                     color = (if (i == 0) JogatinaMagentaGlow else JogatinaMagenta).copy(alpha = alpha),
                     topLeft = Offset(x, y),
-                    size = androidx.compose.ui.geometry.Size(w * 1.2f, thickness)
+                    size = Size(w * 1.2f, thickness)
                 )
             }
         }
@@ -580,7 +587,7 @@ private fun NeonStripes(modifier: Modifier = Modifier) {
         drawRect(
             color = JogatinaMagenta,
             topLeft = Offset(w - 12.dp.toPx(), 0f),
-            size = androidx.compose.ui.geometry.Size(12.dp.toPx(), h * 0.95f)
+            size = Size(12.dp.toPx(), h * 0.95f)
         )
         // Véu escuro para fundir com o fundo.
         drawRect(
@@ -619,8 +626,8 @@ private fun EmailAuthDialog(
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
             Text(
-                text = if (isRegister) stringResource(br.com.jogatina.R.string.auth_title_register)
-                else stringResource(br.com.jogatina.R.string.auth_title_login),
+                text = if (isRegister) stringResource(R.string.auth_title_register)
+                else stringResource(R.string.auth_title_login),
                 color = JogatinaWhite,
                 fontWeight = FontWeight.Bold,
                 fontSize = 18.sp
@@ -632,16 +639,16 @@ private fun EmailAuthDialog(
                 fontSize = 12.sp
             )
             Spacer(modifier = Modifier.height(14.dp))
-            AuthField(stringResource(br.com.jogatina.R.string.auth_field_email), email, { email = it })
+            AuthField(stringResource(R.string.auth_field_email), email, { email = it })
             if (isRegister) {
                 Spacer(modifier = Modifier.height(8.dp))
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    AuthField(stringResource(br.com.jogatina.R.string.auth_field_first), firstName, { firstName = it }, Modifier.weight(1f))
-                    AuthField(stringResource(br.com.jogatina.R.string.auth_field_last), lastName, { lastName = it }, Modifier.weight(1f))
+                    AuthField(stringResource(R.string.auth_field_first), firstName, { firstName = it }, Modifier.weight(1f))
+                    AuthField(stringResource(R.string.auth_field_last), lastName, { lastName = it }, Modifier.weight(1f))
                 }
             }
             Spacer(modifier = Modifier.height(8.dp))
-            AuthField(stringResource(br.com.jogatina.R.string.auth_field_password), password, { password = it }, isPassword = true)
+            AuthField(stringResource(R.string.auth_field_password), password, { password = it }, isPassword = true)
             Spacer(modifier = Modifier.height(16.dp))
             Button(
                 onClick = {
@@ -658,15 +665,15 @@ private fun EmailAuthDialog(
             ) {
                 if (loading) CircularProgressIndicator(color = JogatinaWhite, strokeWidth = 2.dp, modifier = Modifier.size(20.dp))
                 else Text(
-                    if (isRegister) stringResource(br.com.jogatina.R.string.auth_submit_register)
-                    else stringResource(br.com.jogatina.R.string.auth_submit_login),
+                    if (isRegister) stringResource(R.string.auth_submit_register)
+                    else stringResource(R.string.auth_submit_login),
                     fontWeight = FontWeight.SemiBold
                 )
             }
             TextButton(onClick = { onModeChange(if (isRegister) EmailMode.LOGIN else EmailMode.REGISTER) }) {
                 Text(
-                    if (isRegister) stringResource(br.com.jogatina.R.string.auth_have_account)
-                    else stringResource(br.com.jogatina.R.string.create_account),
+                    if (isRegister) stringResource(R.string.auth_have_account)
+                    else stringResource(R.string.create_account),
                     color = JogatinaWhite70,
                     fontSize = 13.sp
                 )

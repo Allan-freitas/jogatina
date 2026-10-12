@@ -421,8 +421,7 @@ fun CatalogScreen(
             onConfirm = { status, fav ->
                 if (conflicted) viewModel.confirmUpdate(game, status, fav)
                 else viewModel.add(game, status, fav)
-                if (state.conflict?.id != game.id) pendingGame = null
-                else pendingGame = null
+                pendingGame = null
             },
             onDismiss = {
                 viewModel.dismissConflict()
@@ -642,7 +641,7 @@ private fun gameFieldColors() = OutlinedTextFieldDefaults.colors(
     focusedBorderColor = JogatinaMagenta,
     unfocusedBorderColor = JogatinaWhite.copy(alpha = 0.25f),
     cursorColor = JogatinaMagenta
-);
+)
 
 @Preview(showBackground = true)
 @Composable

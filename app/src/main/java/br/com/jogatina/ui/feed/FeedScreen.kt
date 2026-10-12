@@ -1,9 +1,14 @@
 package br.com.jogatina.ui.feed
 
 import android.net.Uri
+import android.text.Editable
+import android.text.InputType
+import android.text.TextWatcher
+import android.util.TypedValue
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Arrangement
@@ -41,8 +46,6 @@ import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
-import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -55,6 +58,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
@@ -63,9 +67,11 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.viewinterop.AndroidView
 import br.com.jogatina.data.feed.CommentDto
 import br.com.jogatina.data.feed.PostDto
 import br.com.jogatina.data.feed.Reaction
+import br.com.jogatina.ui.chat.CommitContentEditText
 import br.com.jogatina.ui.profile.ProfileAvatar
 import br.com.jogatina.ui.theme.JogatinaDiscordRed
 import br.com.jogatina.ui.theme.JogatinaMagenta
@@ -79,6 +85,12 @@ import br.com.jogatina.ui.theme.JogatinaWhite70
 import coil.compose.AsyncImage
 import java.time.Duration
 import java.time.Instant
+
+/** Mesmo teto do upload em `feed/images` na Web.Api (UploadImageCommandHandler.MaxBytes). */
+private const val MAX_IMAGE_BYTES = 5 * 1024 * 1024
+
+/** Tag usada para evitar loop ao sincronizar o texto do composer (AndroidView <-> Compose). */
+private const val COMPOSER_TAG_UPDATING = 0x7F0B0002
 
 /**
  * Newsfeed estilo Olympus (só posts de texto/imagem — sem Multimídia/Blog):
@@ -106,7 +118,7 @@ fun FeedScreen(
             val mime = resolver.getType(uri) ?: "image/jpeg"
             resolver.openInputStream(uri)?.use { input ->
                 val bytes = input.readBytes()
-                if (bytes.size > 8 * 1024 * 1024) return@rememberLauncherForActivityResult
+                if (bytes.size > MAX_IMAGE_BYTES) return@rememberLauncherForActivityResult
                 viewModel.onImagePicked(PickedImage(bytes, mime, uri))
             }
         } catch (_: Exception) {
@@ -188,10 +200,13 @@ fun FeedScreen(
             item {
                 ComposerCard(
                     text = state.composerText,
-                    pickedUri = state.pickedImage?.previewUri,
+                    pickedImage = state.pickedImage,
                     publishing = state.publishing,
                     onTextChange = viewModel::onComposerChange,
                     onAttach = { pickImage.launch("image/*") },
+                    onCommitImage = { bytes, mime, uri ->
+                        viewModel.onImagePicked(PickedImage(bytes, mime, uri))
+                    },
                     onClearImage = { viewModel.onImagePicked(null) },
                     onPublish = viewModel::submitPost
                 )
@@ -236,6 +251,7 @@ fun FeedScreen(
                     comments = state.comments[post.id].orEmpty(),
                     commentsLoading = state.commentsLoading.contains(post.id),
                     commentInput = state.commentInputs[post.id].orEmpty(),
+                    commentImage = state.commentImages[post.id],
                     replyTo = state.replyTo[post.id],
                     reacting = state.reacting.contains(post.id),
                     pickerOpen = state.reactionPickerFor == post.id,
@@ -246,6 +262,7 @@ fun FeedScreen(
                     onReact = { kind -> viewModel.react(post.id, kind) },
                     onToggleComments = { viewModel.toggleComments(post.id) },
                     onCommentInput = { viewModel.onCommentInput(post.id, it) },
+                    onCommentImagePicked = { viewModel.onCommentImagePicked(post.id, it) },
                     onReplyTo = { viewModel.setReplyTo(post.id, it) },
                     onSendComment = { viewModel.submitComment(post.id) },
                     onDelete = { viewModel.deletePost(post.id) },
@@ -270,13 +287,87 @@ fun FeedScreen(
     }
 }
 
+/**
+ * Campo com suporte a commitContent: aceita GIF/figurinha do teclado (Gboard)
+ * além da galeria — usado no composer do post e no input de comentário.
+ * Lê os bytes do content:// na hora, pois a permissão do teclado é temporária
+ * (a Uri não serve para preview depois). ByteArray + ImageDecoderDecoder anima GIF.
+ */
+@Composable
+private fun CommitContentField(
+    value: String,
+    onValueChange: (String) -> Unit,
+    onCommitImage: (ByteArray, String, Uri) -> Unit,
+    hint: String,
+    modifier: Modifier = Modifier,
+    textSizeSp: Float = 14f,
+    singleLine: Boolean = false,
+    maxLines: Int = 5
+) {
+    val textColor = JogatinaWhite
+    val hintColor = JogatinaWhite70
+
+    AndroidView(
+        factory = { ctx ->
+            CommitContentEditText(ctx).apply {
+                background = null
+                setTextColor(textColor.toArgb())
+                setHintTextColor(hintColor.toArgb())
+                setTextSize(TypedValue.COMPLEX_UNIT_SP, textSizeSp)
+                this.hint = hint
+                this.maxLines = maxLines
+                isSingleLine = singleLine
+                inputType = InputType.TYPE_CLASS_TEXT or
+                    (if (singleLine) 0 else InputType.TYPE_TEXT_FLAG_MULTI_LINE) or
+                    InputType.TYPE_TEXT_FLAG_CAP_SENTENCES
+                setText(value)
+                setTag(COMPOSER_TAG_UPDATING, false)
+                onCommitContent = { mime, uri ->
+                    try {
+                        ctx.contentResolver.openInputStream(uri)?.use { input ->
+                            val bytes = input.readBytes()
+                            if (bytes.size in 1..MAX_IMAGE_BYTES) {
+                                post { onCommitImage(bytes, mime, uri) }
+                            }
+                        }
+                    } catch (_: Exception) {
+                    }
+                }
+                addTextChangedListener(object : TextWatcher {
+                    override fun beforeTextChanged(s: CharSequence?, a: Int, b: Int, c: Int) = Unit
+                    override fun onTextChanged(s: CharSequence?, a: Int, b: Int, c: Int) = Unit
+                    override fun afterTextChanged(s: Editable?) {
+                        if (getTag(COMPOSER_TAG_UPDATING) == true) return
+                        onValueChange(s?.toString().orEmpty())
+                    }
+                })
+            }
+        },
+        update = { edit ->
+            if (edit.text?.toString() != value) {
+                edit.setTag(COMPOSER_TAG_UPDATING, true)
+                val selStart = edit.selectionStart.coerceAtLeast(0)
+                edit.setText(value)
+                try {
+                    edit.setSelection(selStart.coerceAtMost(value.length))
+                } catch (_: Exception) {
+                }
+                edit.setTag(COMPOSER_TAG_UPDATING, false)
+            }
+            if (edit.hint?.toString() != hint) edit.hint = hint
+        },
+        modifier = modifier
+    )
+}
+
 @Composable
 private fun ComposerCard(
     text: String,
-    pickedUri: Uri?,
+    pickedImage: PickedImage?,
     publishing: Boolean,
     onTextChange: (String) -> Unit,
     onAttach: () -> Unit,
+    onCommitImage: (ByteArray, String, Uri) -> Unit,
     onClearImage: () -> Unit,
     onPublish: () -> Unit
 ) {
@@ -285,24 +376,22 @@ private fun ComposerCard(
         shape = RoundedCornerShape(16.dp)
     ) {
         Column(modifier = Modifier.padding(12.dp)) {
-            OutlinedTextField(
+            CommitContentField(
                 value = text,
                 onValueChange = onTextChange,
-                placeholder = { Text(stringResource(br.com.jogatina.R.string.composer_hint), color = JogatinaWhite70, fontSize = 14.sp) },
-                modifier = Modifier.fillMaxWidth(),
+                onCommitImage = onCommitImage,
+                hint = stringResource(br.com.jogatina.R.string.composer_hint),
+                textSizeSp = 14f,
+                singleLine = false,
                 maxLines = 5,
-                colors = OutlinedTextFieldDefaults.colors(
-                    focusedTextColor = JogatinaWhite,
-                    unfocusedTextColor = JogatinaWhite,
-                    focusedBorderColor = Color.Transparent,
-                    unfocusedBorderColor = Color.Transparent,
-                    cursorColor = JogatinaMagenta
-                )
+                modifier = Modifier.fillMaxWidth()
             )
-            if (pickedUri != null) {
+            if (pickedImage != null) {
                 Box {
                     AsyncImage(
-                        model = pickedUri,
+                        // Bytes lidos na hora: a content:// do teclado (Gboard) expira
+                        // após o releasePermission. ByteArray + ImageDecoderDecoder anima GIF.
+                        model = pickedImage.bytes,
                         contentDescription = stringResource(br.com.jogatina.R.string.attached_image),
                         modifier = Modifier
                             .fillMaxWidth()
@@ -352,6 +441,7 @@ private fun PostCard(
     comments: List<CommentDto>,
     commentsLoading: Boolean,
     commentInput: String,
+    commentImage: PickedImage?,
     replyTo: CommentDto?,
     reacting: Boolean,
     pickerOpen: Boolean,
@@ -362,6 +452,7 @@ private fun PostCard(
     onReact: (String?) -> Unit,
     onToggleComments: () -> Unit,
     onCommentInput: (String) -> Unit,
+    onCommentImagePicked: (PickedImage?) -> Unit,
     onReplyTo: (CommentDto?) -> Unit,
     onSendComment: () -> Unit,
     onDelete: () -> Unit,
@@ -508,6 +599,7 @@ private fun PostCard(
                     CommentRow(
                         comment = comment,
                         photoUrl = resolvePhoto(comment.authorPhotoUrl),
+                        resolveImage = { resolvePhoto(it) },
                         onReply = { onReplyTo(comment) },
                         onAuthorClick = onAuthorClick
                     )
@@ -516,6 +608,7 @@ private fun PostCard(
                             comment = reply,
                             photoUrl = resolvePhoto(reply.authorPhotoUrl),
                             indent = true,
+                            resolveImage = { resolvePhoto(it) },
                             onReply = null,
                             onAuthorClick = onAuthorClick
                         )
@@ -537,23 +630,48 @@ private fun PostCard(
                         }
                     }
                 }
+                if (commentImage != null) {
+                    Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(top = 4.dp)) {
+                        AsyncImage(
+                            // Bytes lidos na hora (GIF do teclado/temp Uri) + decoder global animam.
+                            model = commentImage.bytes,
+                            contentDescription = stringResource(br.com.jogatina.R.string.attached_image),
+                            contentScale = ContentScale.Crop,
+                            modifier = Modifier
+                                .size(56.dp)
+                                .clip(RoundedCornerShape(10.dp))
+                        )
+                        Spacer(modifier = Modifier.width(8.dp))
+                        if (sendingComment) {
+                            CircularProgressIndicator(color = JogatinaMagenta, strokeWidth = 2.dp, modifier = Modifier.size(18.dp))
+                        } else {
+                            IconButton(onClick = { onCommentImagePicked(null) }, modifier = Modifier.size(28.dp)) {
+                                Icon(Icons.Filled.Close, contentDescription = stringResource(br.com.jogatina.R.string.remove_image), tint = JogatinaSubtitle)
+                            }
+                        }
+                    }
+                }
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    OutlinedTextField(
+                    CommitContentField(
                         value = commentInput,
                         onValueChange = onCommentInput,
-                        placeholder = { Text(stringResource(br.com.jogatina.R.string.comment_hint), color = JogatinaWhite70, fontSize = 13.sp) },
-                        modifier = Modifier.weight(1f),
+                        onCommitImage = { bytes, mime, uri ->
+                            onCommentImagePicked(PickedImage(bytes, mime, uri))
+                        },
+                        hint = stringResource(br.com.jogatina.R.string.comment_hint),
+                        textSizeSp = 13f,
                         singleLine = true,
-                        shape = RoundedCornerShape(24.dp),
-                        colors = OutlinedTextFieldDefaults.colors(
-                            focusedTextColor = JogatinaWhite,
-                            unfocusedTextColor = JogatinaWhite,
-                            focusedBorderColor = JogatinaMagenta,
-                            unfocusedBorderColor = JogatinaWhite.copy(alpha = 0.25f),
-                            cursorColor = JogatinaMagenta
-                        )
+                        maxLines = 1,
+                        modifier = Modifier
+                            .weight(1f)
+                            .clip(RoundedCornerShape(24.dp))
+                            .border(1.dp, JogatinaWhite.copy(alpha = 0.25f), RoundedCornerShape(24.dp))
+                            .padding(horizontal = 14.dp, vertical = 12.dp)
                     )
-                    IconButton(onClick = onSendComment, enabled = !sendingComment) {
+                    IconButton(
+                        onClick = onSendComment,
+                        enabled = !sendingComment && (commentInput.isNotBlank() || commentImage != null)
+                    ) {
                         if (sendingComment) {
                             CircularProgressIndicator(color = JogatinaWhite, strokeWidth = 2.dp, modifier = Modifier.size(18.dp))
                         } else {
@@ -571,6 +689,7 @@ private fun CommentRow(
     comment: CommentDto,
     photoUrl: String?,
     indent: Boolean = false,
+    resolveImage: (String) -> String?,
     onReply: (() -> Unit)?,
     onAuthorClick: (String) -> Unit
 ) {
@@ -606,10 +725,43 @@ private fun CommentRow(
                     }
                 }
             }
-            Text(comment.content, color = JogatinaWhite, fontSize = 13.sp)
+            val (textContent, imageTokens) = splitImageTokens(comment.content)
+            if (textContent.isNotBlank()) {
+                Text(textContent, color = JogatinaWhite, fontSize = 13.sp)
+            }
+            imageTokens.forEach { token ->
+                Spacer(modifier = Modifier.height(6.dp))
+                AsyncImage(
+                    model = resolveImage(token) ?: token,
+                    contentDescription = stringResource(br.com.jogatina.R.string.attached_image),
+                    contentScale = ContentScale.Crop,
+                    modifier = Modifier
+                        .size(width = 180.dp, height = 140.dp)
+                        .clip(RoundedCornerShape(10.dp))
+                )
+            }
             Text(timeAgo(comment.createdOnUtc), color = JogatinaSubtitle, fontSize = 11.sp)
         }
     }
+}
+
+/** Separa o texto do comentário das URLs de imagem (convenção: URL no conteúdo). */
+private fun splitImageTokens(content: String): Pair<String, List<String>> {
+    val tokens = content.split("\\s+".toRegex())
+    val images = tokens.filter { isImageToken(it) }
+    val text = tokens.filterNot { isImageToken(it) }.joinToString(" ").trim()
+    return text to images
+}
+
+private fun isImageToken(token: String): Boolean {
+    val t = token.trim().trim('"', '\'', '(', ')', ',', ';')
+    if (t.isBlank()) return false
+    val lower = t.lowercase()
+    val looksPath = t.startsWith("/uploads/") ||
+        lower.startsWith("http://") || lower.startsWith("https://")
+    if (!looksPath) return false
+    return lower.contains(".jpg") || lower.contains(".jpeg") || lower.contains(".png") ||
+        lower.contains(".gif") || lower.contains(".webp") || t.startsWith("/uploads/")
 }
 
 @Composable
@@ -648,10 +800,10 @@ private fun PostCardPreview() {
                 comments = listOf(
                     CommentDto("c1", "b", "Ana", null, "Eu vou!", Instant.now().toString(), emptyList())
                 ),
-                commentsLoading = false, commentInput = "", replyTo = null,
+                commentsLoading = false, commentInput = "", commentImage = null, replyTo = null,
                 reacting = false, pickerOpen = false, sendingComment = false,
                 onQuickReact = {}, onOpenPicker = {}, onClosePicker = {}, onReact = {},
-                onToggleComments = {}, onCommentInput = {},
+                onToggleComments = {}, onCommentInput = {}, onCommentImagePicked = {},
                 onReplyTo = {}, onSendComment = {}, onDelete = {},
                 resolvePhoto = { it },
                 onAuthorClick = {}
