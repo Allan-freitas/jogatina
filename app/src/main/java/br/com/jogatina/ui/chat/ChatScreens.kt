@@ -429,7 +429,10 @@ fun ConversationScreen(
                         .padding(8.dp)
                 ) {
                     AsyncImage(
-                        model = picked.previewUri ?: picked.bytes,
+                        // Bytes lidos na hora: a content:// do teclado (Gboard) expira
+                        // após o releasePermission, então a Uri não recarrega.
+                        // ByteArray + ImageDecoderDecoder anima GIF/WebP no preview.
+                        model = picked.bytes,
                         contentDescription = stringResource(br.com.jogatina.R.string.attached_image),
                         contentScale = ContentScale.Crop,
                         modifier = Modifier
