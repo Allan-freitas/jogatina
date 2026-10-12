@@ -90,6 +90,8 @@
     <string name="cover_section">Game cover (applies to the catalog)</string>
     <string name="send_cover">Upload cover</string>
     <string name="change_image">Change image</string>
+    <string name="play_with_friends">Play with friends</string>
+    <string name="no_friends_to_invite">You have no friends to invite yet.</string>
 
     <!-- Notifications -->
     <string name="notif_title">Notifications</string>
@@ -101,7 +103,10 @@
     <string name="notif_friend_request">Friend request</string>
     <string name="notif_friend_accepted">Friendship accepted</string>
     <string name="notif_new_message">New message</string>
+    <string name="notif_game_invite">Game invite</string>
     <string name="notif_generic">Notification</string>
+    <string name="notif_channel_name">Notifications</string>
+    <string name="notif_channel_desc">Game invites, friend requests and messages</string>
 
     <!-- Profile -->
     <string name="profile_title">Profile</string>

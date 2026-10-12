@@ -90,6 +90,8 @@
     <string name="cover_section">Capa do jogo (vale para o catálogo)</string>
     <string name="send_cover">Enviar capa</string>
     <string name="change_image">Trocar imagem</string>
+    <string name="play_with_friends">Jogar com amigos</string>
+    <string name="no_friends_to_invite">Você ainda não tem amigos para convidar.</string>
 
     <!-- Notificações -->
     <string name="notif_title">Notificações</string>
@@ -101,7 +103,10 @@
     <string name="notif_friend_request">Pedido de amizade</string>
     <string name="notif_friend_accepted">Amizade aceita</string>
     <string name="notif_new_message">Nova mensagem</string>
+    <string name="notif_game_invite">Convite para jogar</string>
     <string name="notif_generic">Notificação</string>
+    <string name="notif_channel_name">Notificações</string>
+    <string name="notif_channel_desc">Convites de jogo, pedidos de amizade e mensagens</string>
 
     <!-- Perfil -->
     <string name="profile_title">Perfil</string>

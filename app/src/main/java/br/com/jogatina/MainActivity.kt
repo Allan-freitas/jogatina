@@ -1,9 +1,14 @@
 package br.com.jogatina
 
+import android.Manifest
+import android.content.Intent
+import android.content.pm.PackageManager
 import android.os.Bundle
 import androidx.activity.ComponentActivity
+import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.activity.viewModels
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -28,6 +33,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -49,6 +55,7 @@ import androidx.compose.ui.tooling.preview.PreviewScreenSizes
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
+import androidx.core.content.ContextCompat
 import br.com.jogatina.data.api.ApiClient
 import br.com.jogatina.data.auth.AuthRepository
 import br.com.jogatina.data.auth.AuthResult
@@ -63,6 +70,7 @@ import br.com.jogatina.ui.games.CatalogViewModel
 import br.com.jogatina.ui.games.LibraryScreen
 import br.com.jogatina.ui.games.LibraryViewModel
 import br.com.jogatina.data.notifications.NotificationsRepository
+import br.com.jogatina.notifications.SystemNotifier
 import br.com.jogatina.ui.notifications.NotificationsScreen
 import br.com.jogatina.ui.notifications.NotificationsViewModel
 import br.com.jogatina.ui.social.FriendsScreen
@@ -83,6 +91,8 @@ import br.com.jogatina.ui.welcome.WelcomeScreen
 import br.com.jogatina.ui.welcome.WelcomeViewModel
 
 class MainActivity : ComponentActivity() {
+
+    private val openNotifications = mutableStateOf(false)
 
     private val apiClient by lazy { ApiClient(AuthRepository.DEFAULT_BASE_URL) }
     private val authRepository by lazy { AuthRepository() }
@@ -114,12 +124,18 @@ class MainActivity : ComponentActivity() {
         }
     }
     private val libraryViewModel: LibraryViewModel by viewModels {
-        LibraryViewModel.factory(gamesRepository) {
+        LibraryViewModel.factory(gamesRepository, friendsRepository) {
             welcomeViewModel.logout()
         }
     }
     private val notificationsViewModel: NotificationsViewModel by viewModels {
-        NotificationsViewModel.factory(notificationsRepository) {
+        NotificationsViewModel.factory(
+            notificationsRepository,
+            AuthRepository.DEFAULT_BASE_URL,
+            { tokenStore.accessToken },
+            { apiClient.tokenRefresher?.invoke() },
+            applicationContext
+        ) {
             welcomeViewModel.logout()
         }
     }
@@ -165,9 +181,26 @@ class MainActivity : ComponentActivity() {
             }
         }
         enableEdgeToEdge()
+        SystemNotifier.ensureChannel(applicationContext)
+        openNotifications.value = intent.getBooleanExtra(SystemNotifier.EXTRA_OPEN_NOTIFICATIONS, false)
         setContent {
             JogatinaTheme {
                 val welcomeState by welcomeViewModel.state.collectAsState()
+
+                val notificationPermission = rememberLauncherForActivityResult(
+                    ActivityResultContracts.RequestPermission()
+                ) { }
+                LaunchedEffect(welcomeState.loggedIn) {
+                    if (welcomeState.loggedIn &&
+                        ContextCompat.checkSelfPermission(
+                            this@MainActivity,
+                            Manifest.permission.POST_NOTIFICATIONS
+                        ) != PackageManager.PERMISSION_GRANTED
+                    ) {
+                        notificationPermission.launch(Manifest.permission.POST_NOTIFICATIONS)
+                    }
+                }
+
                 if (welcomeState.loggedIn) {
                     JogatinaApp(
                         feedViewModel = feedViewModel,
@@ -183,12 +216,22 @@ class MainActivity : ComponentActivity() {
                         tokenStore = tokenStore,
                         apiBaseUrl = AuthRepository.DEFAULT_BASE_URL,
                         tokenRefresher = { apiClient.tokenRefresher?.invoke() },
+                        openNotifications = openNotifications.value,
+                        onOpenNotificationsHandled = { openNotifications.value = false },
                         onLogout = { welcomeViewModel.logout() }
                     )
                 } else {
                     WelcomeScreen(viewModel = welcomeViewModel)
                 }
             }
+        }
+    }
+
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        setIntent(intent)
+        if (intent.getBooleanExtra(SystemNotifier.EXTRA_OPEN_NOTIFICATIONS, false)) {
+            openNotifications.value = true
         }
     }
 }
@@ -209,6 +252,8 @@ fun JogatinaApp(
     tokenStore: TokenStore? = null,
     apiBaseUrl: String = "",
     tokenRefresher: (suspend () -> String?)? = null,
+    openNotifications: Boolean = false,
+    onOpenNotificationsHandled: () -> Unit = {},
     onLogout: () -> Unit = {}
 ) {
     var currentDestination by rememberSaveable { mutableStateOf(AppDestinations.HOME) }
@@ -221,6 +266,29 @@ fun JogatinaApp(
     var newChatFriend by remember { mutableStateOf<FriendDto?>(null) }
     val notificationsState = notificationsViewModel?.state?.collectAsState()?.value
     val chatListState = chatListViewModel?.state?.collectAsState()?.value
+
+    // Veio de um toque na notificação do sistema: abre a tela de notificações.
+    LaunchedEffect(openNotifications) {
+        if (openNotifications) {
+            notificationsViewModel?.refresh()
+            showNotifications = true
+            onOpenNotificationsHandled()
+        }
+    }
+
+    // Recarrega as notificações a cada navegação (home/perfil/favoritos/abrir telas),
+    // então o sino reflete o que chegou mesmo sem abrir a lista.
+    LaunchedEffect(
+        currentDestination,
+        showNotifications,
+        showCatalog,
+        showChatList,
+        showFriends,
+        selectedAuthorId,
+        openConversationId
+    ) {
+        notificationsViewModel?.refresh()
+    }
 
     Scaffold(
         modifier = Modifier.fillMaxSize(),

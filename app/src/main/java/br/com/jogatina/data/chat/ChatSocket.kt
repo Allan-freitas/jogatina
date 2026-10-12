@@ -1,6 +1,7 @@
 package br.com.jogatina.data.chat
 
 import android.util.Log
+import br.com.jogatina.data.notifications.NotificationDto
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
@@ -18,11 +19,12 @@ import org.json.JSONObject
 /** Eventos vindos do WS /ws/chat. */
 sealed interface ChatEvent {
     data class Message(val message: ChatMessageDto) : ChatEvent
+    data class Notification(val notification: NotificationDto) : ChatEvent
     data class ReadOk(val conversationId: String) : ChatEvent
     data class Error(val code: String, val message: String) : ChatEvent
     data object Connected : ChatEvent
     data class Disconnected(val reason: String) : ChatEvent
-    /** Handshake rejeitado por token inválido/expirado, mesmo após tentar renovar. */
+    /** Handshake rejeitado por token invA�lido/expirado, mesmo apA3s tentar renovar. */
     data object AuthExpired : ChatEvent
 }
 
@@ -145,6 +147,9 @@ class ChatSocket(
                         "message" -> ChatRepository.parseMessagePayload(json)?.let {
                             _events.emit(ChatEvent.Message(it))
                         }
+                        "notification" -> parseNotification(json)?.let {
+                            _events.emit(ChatEvent.Notification(it))
+                        }
                         "read_ok" -> _events.emit(
                             ChatEvent.ReadOk(json.optString("conversationId")))
                         "pong" -> Unit
@@ -202,6 +207,21 @@ class ChatSocket(
             socket = null
             scope.launch { _events.emit(ChatEvent.Disconnected(reason.ifBlank { "fechado" })) }
         }
+    }
+
+    private fun parseNotification(json: JSONObject): NotificationDto? = try {
+        NotificationDto(
+            id = json.getString("id"),
+            type = json.optString("notificationType"),
+            title = json.optString("title"),
+            body = json.optString("body"),
+            isRead = json.optBoolean("isRead"),
+            createdOnUtc = json.optString("createdOnUtc"),
+            referenceType = json.optString("referenceType").ifBlank { null },
+            referenceId = json.optString("referenceId").ifBlank { null }
+        )
+    } catch (_: Exception) {
+        null
     }
 
     companion object {

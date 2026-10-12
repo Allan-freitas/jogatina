@@ -334,6 +334,7 @@ class ConversationViewModel(
                 }
             }
             is ChatEvent.ReadOk -> Unit
+            is ChatEvent.Notification -> Unit
             is ChatEvent.Error ->
                 _state.value = _state.value.copy(error = event.message)
         }

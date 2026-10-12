@@ -14,6 +14,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -25,6 +26,7 @@ import androidx.compose.material.icons.filled.GroupAdd
 import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material.icons.filled.PersonAdd
 import androidx.compose.material.icons.filled.Refresh
+import androidx.compose.material.icons.filled.SportsEsports
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
@@ -39,9 +41,9 @@ import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -71,11 +73,6 @@ fun NotificationsScreen(
     modifier: Modifier = Modifier
 ) {
     val state by viewModel.state.collectAsState()
-
-    DisposableEffect(Unit) {
-        viewModel.startAutoRefresh()
-        onDispose { viewModel.stopAutoRefresh() }
-    }
 
     Scaffold(
         modifier = modifier.fillMaxSize(),
@@ -160,7 +157,14 @@ fun NotificationsScreen(
                     modifier = Modifier.padding(24.dp)
                 )
             } else {
-                LazyColumn(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                // Um LazyListState novo por filtro garante que a lista volte ao topo
+                // ao alternar "Todas"/"Não lidas" — senão o scroll fica retido e as
+                // notificações recém-chegadas (no topo) somem da viewport.
+                val listState = remember(state.onlyUnread) { LazyListState() }
+                LazyColumn(
+                    state = listState,
+                    verticalArrangement = Arrangement.spacedBy(10.dp)
+                ) {
                     items(state.visible, key = { it.id }) { notification ->
                         NotificationRow(
                             notification = notification,
@@ -239,6 +243,7 @@ private fun typeIcon(type: String): ImageVector = when (type) {
     "friend_request" -> Icons.Filled.PersonAdd
     "friend_accepted" -> Icons.Filled.GroupAdd
     "new_message" -> Icons.Filled.ChatBubbleOutline
+    "game_invite" -> Icons.Filled.SportsEsports
     else -> Icons.Filled.Notifications
 }
 
@@ -247,6 +252,7 @@ private fun typeLabel(type: String): String = when (type) {
     "friend_request" -> stringResource(br.com.jogatina.R.string.notif_friend_request)
     "friend_accepted" -> stringResource(br.com.jogatina.R.string.notif_friend_accepted)
     "new_message" -> stringResource(br.com.jogatina.R.string.notif_new_message)
+    "game_invite" -> stringResource(br.com.jogatina.R.string.notif_game_invite)
     else -> stringResource(br.com.jogatina.R.string.notif_generic)
 }
 

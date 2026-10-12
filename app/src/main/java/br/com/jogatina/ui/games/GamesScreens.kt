@@ -14,6 +14,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -22,7 +23,9 @@ import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
@@ -36,6 +39,8 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.Checkbox
+import androidx.compose.material3.CheckboxDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilterChip
@@ -56,6 +61,7 @@ import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -75,6 +81,7 @@ import androidx.compose.ui.window.Dialog
 import br.com.jogatina.data.games.GameDto
 import br.com.jogatina.data.games.GameStatus
 import br.com.jogatina.data.games.MyGameDto
+import br.com.jogatina.data.social.FriendDto
 import br.com.jogatina.ui.theme.JogatinaDiscordRed
 import br.com.jogatina.ui.theme.JogatinaGold
 import br.com.jogatina.ui.theme.JogatinaMagenta
@@ -193,7 +200,10 @@ fun LibraryScreen(
                                 viewModel.changeStatus(game, game.status, !game.isFavorite)
                             },
                             onDelete = { viewModel.remove(game) },
-                            onEdit = { editing = game }
+                            onEdit = {
+                                viewModel.loadFriends()
+                                editing = game
+                            }
                         )
                     }
                     item { Spacer(modifier = Modifier.height(12.dp)) }
@@ -212,9 +222,13 @@ fun LibraryScreen(
             coverUrl = viewModel.coverUrl(game.coverImageUrl),
             pickedCoverUri = coverUri,
             onPickCover = { pickCover.launch("image/*") },
-            onConfirm = { status, fav ->
+            friends = state.friends,
+            showFriendPicker = true,
+            onConfirm = { status, fav, friendIds ->
                 val cover = coverBytes?.let { NewCover(it, coverMime) }
                 viewModel.updateGame(game, status, fav, cover)
+                val gameId = game.gameId
+                if (friendIds.isNotEmpty()) viewModel.inviteToPlay(gameId, friendIds)
                 closeEditor()
             },
             onDismiss = { closeEditor() }
@@ -418,7 +432,7 @@ fun CatalogScreen(
             initialFavorite = pendingFav,
             isUpdate = conflicted,
             conflictMessage = if (conflicted) stringResource(br.com.jogatina.R.string.conflict_msg) else null,
-            onConfirm = { status, fav ->
+            onConfirm = { status, fav, _ ->
                 if (conflicted) viewModel.confirmUpdate(game, status, fav)
                 else viewModel.add(game, status, fav)
                 pendingGame = null
@@ -534,11 +548,14 @@ private fun AddToLibraryDialog(
     coverUrl: String? = null,
     pickedCoverUri: Uri? = null,
     onPickCover: (() -> Unit)? = null,
-    onConfirm: (GameStatus, Boolean) -> Unit,
+    friends: List<FriendDto> = emptyList(),
+    showFriendPicker: Boolean = false,
+    onConfirm: (GameStatus, Boolean, List<String>) -> Unit,
     onDismiss: () -> Unit
 ) {
     var status by remember { mutableStateOf(initialStatus) }
     var favorite by remember { mutableStateOf(initialFavorite) }
+    val selectedFriends = remember { mutableStateListOf<String>() }
 
     Dialog(onDismissRequest = onDismiss) {
         Column(
@@ -612,13 +629,54 @@ private fun AddToLibraryDialog(
                     colors = SwitchDefaults.colors(checkedThumbColor = JogatinaGold, checkedTrackColor = JogatinaGold.copy(alpha = 0.4f))
                 )
             }
+            if (showFriendPicker) {
+                Spacer(modifier = Modifier.height(12.dp))
+                Text(stringResource(br.com.jogatina.R.string.play_with_friends), color = JogatinaWhite70, fontSize = 12.sp)
+                Spacer(modifier = Modifier.height(6.dp))
+                if (friends.isEmpty()) {
+                    Text(stringResource(br.com.jogatina.R.string.no_friends_to_invite), color = JogatinaSubtitle, fontSize = 13.sp)
+                } else {
+                    Column(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .heightIn(max = 168.dp)
+                            .verticalScroll(rememberScrollState())
+                    ) {
+                        friends.forEach { friend ->
+                            val checked = selectedFriends.contains(friend.friendId)
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .clickable {
+                                        if (checked) selectedFriends.remove(friend.friendId)
+                                        else selectedFriends.add(friend.friendId)
+                                    }
+                            ) {
+                                Checkbox(
+                                    checked = checked,
+                                    onCheckedChange = { on ->
+                                        if (on) {
+                                            if (!selectedFriends.contains(friend.friendId)) selectedFriends.add(friend.friendId)
+                                        } else {
+                                            selectedFriends.remove(friend.friendId)
+                                        }
+                                    },
+                                    colors = CheckboxDefaults.colors(checkedColor = JogatinaMagenta, uncheckedColor = JogatinaWhite70)
+                                )
+                                Text(friend.fullName, color = JogatinaWhite, fontSize = 14.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                            }
+                        }
+                    }
+                }
+            }
             Spacer(modifier = Modifier.height(12.dp))
             Row(horizontalArrangement = Arrangement.End, modifier = Modifier.fillMaxWidth()) {
                 TextButton(onClick = onDismiss, enabled = !busy) {
                     Text(stringResource(br.com.jogatina.R.string.cancel), color = JogatinaWhite70)
                 }
                 Button(
-                    onClick = { onConfirm(status, favorite) },
+                    onClick = { onConfirm(status, favorite, selectedFriends.toList()) },
                     enabled = !busy,
                     shape = RoundedCornerShape(10.dp),
                     colors = ButtonDefaults.buttonColors(containerColor = JogatinaMagenta, contentColor = JogatinaWhite)

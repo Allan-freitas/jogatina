@@ -7,6 +7,8 @@ import br.com.jogatina.data.auth.AuthResult
 import br.com.jogatina.data.games.GameStatus
 import br.com.jogatina.data.games.GamesRepository
 import br.com.jogatina.data.games.MyGameDto
+import br.com.jogatina.data.social.FriendDto
+import br.com.jogatina.data.social.FriendsRepository
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -20,7 +22,10 @@ data class LibraryUiState(    val games: List<MyGameDto> = emptyList(),
     val error: String? = null,
     val filter: GameStatus? = null,
     val removing: Set<String> = emptySet(),
-    val updating: Set<String> = emptySet()
+    val updating: Set<String> = emptySet(),
+    val friends: List<FriendDto> = emptyList(),
+    val friendsLoading: Boolean = false,
+    val inviting: Boolean = false
 ) {
     val visible: List<MyGameDto>
         get() = games
@@ -30,6 +35,7 @@ data class LibraryUiState(    val games: List<MyGameDto> = emptyList(),
 
 class LibraryViewModel(
     private val games: GamesRepository,
+    private val friends: FriendsRepository,
     private val onAuthExpired: () -> Unit
 ) : ViewModel() {
 
@@ -40,6 +46,7 @@ class LibraryViewModel(
 
     init {
         refresh(first = true)
+        loadFriends()
     }
 
     fun refresh(first: Boolean = false) {
@@ -62,6 +69,37 @@ class LibraryViewModel(
 
     fun setFilter(filter: GameStatus?) {
         _state.value = _state.value.copy(filter = filter)
+    }
+
+    /** Carrega os amigos para o seletor "Jogar com" do diálogo do jogo. */
+    fun loadFriends() {
+        if (_state.value.friendsLoading) return
+        _state.value = _state.value.copy(friendsLoading = true)
+        viewModelScope.launch {
+            when (val r = friends.getFriends()) {
+                is AuthResult.Success ->
+                    _state.value = _state.value.copy(friends = r.value, friendsLoading = false)
+                is AuthResult.Error -> {
+                    _state.value = _state.value.copy(friendsLoading = false)
+                    handleError(r)
+                }
+            }
+        }
+    }
+
+    /** Notifica os amigos marcados que o usuário quer jogar o jogo. */
+    fun inviteToPlay(gameId: String, friendIds: List<String>) {
+        if (friendIds.isEmpty() || _state.value.inviting) return
+        _state.value = _state.value.copy(inviting = true, error = null)
+        viewModelScope.launch {
+            when (val r = games.inviteToPlay(gameId, friendIds)) {
+                is AuthResult.Success -> _state.value = _state.value.copy(inviting = false)
+                is AuthResult.Error -> {
+                    _state.value = _state.value.copy(inviting = false)
+                    handleError(r)
+                }
+            }
+        }
     }
 
     fun remove(game: MyGameDto) {
@@ -128,11 +166,15 @@ class LibraryViewModel(
     }
 
     companion object {
-        fun factory(games: GamesRepository, onAuthExpired: () -> Unit): ViewModelProvider.Factory =
+        fun factory(
+            games: GamesRepository,
+            friends: FriendsRepository,
+            onAuthExpired: () -> Unit
+        ): ViewModelProvider.Factory =
             object : ViewModelProvider.Factory {
                 @Suppress("UNCHECKED_CAST")
                 override fun <T : ViewModel> create(modelClass: Class<T>): T =
-                    LibraryViewModel(games, onAuthExpired) as T
+                    LibraryViewModel(games, friends, onAuthExpired) as T
             }
     }
 }
