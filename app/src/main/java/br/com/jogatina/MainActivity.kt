@@ -124,7 +124,7 @@ class MainActivity : ComponentActivity() {
         }
     }
     private val libraryViewModel: LibraryViewModel by viewModels {
-        LibraryViewModel.factory(gamesRepository, friendsRepository) {
+        LibraryViewModel.factory(gamesRepository, friendsRepository, applicationContext) {
             welcomeViewModel.logout()
         }
     }

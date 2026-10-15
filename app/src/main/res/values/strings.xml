@@ -92,6 +92,7 @@
     <string name="change_image">Change image</string>
     <string name="play_with_friends">Play with friends</string>
     <string name="no_friends_to_invite">You have no friends to invite yet.</string>
+    <string name="post_play_invite">Let\'s play %1$s with %2$s!</string>
 
     <!-- Notifications -->
     <string name="notif_title">Notifications</string>

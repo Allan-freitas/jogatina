@@ -49,11 +49,16 @@ class GamesRepository(
     suspend fun removeFromLibrary(gameId: String): AuthResult<Unit> =
         api.delete("users/me/games/$gameId", token()).map { }
 
-    /** Marca amigos para jogar um jogo; cada um recebe uma notificação. Retorna quantos foram notificados. */
-    suspend fun inviteToPlay(gameId: String, friendIds: List<String>): AuthResult<Int> {
+    /**
+     * Marca amigos para jogar um jogo; cada um recebe uma notificação. Quando [message]
+     * é informado, o servidor também publica um post no feed com a capa do jogo.
+     * Retorna quantos foram notificados.
+     */
+    suspend fun inviteToPlay(gameId: String, friendIds: List<String>, message: String? = null): AuthResult<Int> {
         val arr = JSONArray()
         friendIds.forEach { arr.put(it) }
         val body = JSONObject().put("friendIds", arr)
+        if (!message.isNullOrBlank()) body.put("message", message)
         return api.post("games/$gameId/invites", body, token()).map { raw ->
             JSONObject(raw).optInt("notified")
         }

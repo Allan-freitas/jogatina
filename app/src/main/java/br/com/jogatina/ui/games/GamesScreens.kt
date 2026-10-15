@@ -227,8 +227,7 @@ fun LibraryScreen(
             onConfirm = { status, fav, friendIds ->
                 val cover = coverBytes?.let { NewCover(it, coverMime) }
                 viewModel.updateGame(game, status, fav, cover)
-                val gameId = game.gameId
-                if (friendIds.isNotEmpty()) viewModel.inviteToPlay(gameId, friendIds)
+                if (friendIds.isNotEmpty()) viewModel.inviteToPlay(game, friendIds)
                 closeEditor()
             },
             onDismiss = { closeEditor() }

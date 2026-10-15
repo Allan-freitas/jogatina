@@ -92,6 +92,7 @@
     <string name="change_image">Trocar imagem</string>
     <string name="play_with_friends">Jogar com amigos</string>
     <string name="no_friends_to_invite">Você ainda não tem amigos para convidar.</string>
+    <string name="post_play_invite">Bora jogar %1$s com %2$s!</string>
 
     <!-- Notificações -->
     <string name="notif_title">Notificações</string>

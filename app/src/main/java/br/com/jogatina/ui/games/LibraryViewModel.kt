@@ -1,8 +1,10 @@
 package br.com.jogatina.ui.games
 
+import android.content.Context
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
+import br.com.jogatina.R
 import br.com.jogatina.data.auth.AuthResult
 import br.com.jogatina.data.games.GameStatus
 import br.com.jogatina.data.games.GamesRepository
@@ -36,6 +38,7 @@ data class LibraryUiState(    val games: List<MyGameDto> = emptyList(),
 class LibraryViewModel(
     private val games: GamesRepository,
     private val friends: FriendsRepository,
+    private val appContext: Context,
     private val onAuthExpired: () -> Unit
 ) : ViewModel() {
 
@@ -87,12 +90,23 @@ class LibraryViewModel(
         }
     }
 
-    /** Notifica os amigos marcados que o usuário quer jogar o jogo. */
-    fun inviteToPlay(gameId: String, friendIds: List<String>) {
+    /**
+     * Notifica os amigos marcados. Numa única chamada, o servidor também publica no
+     * feed um post com a capa do jogo e a mensagem padrão (com os nomes marcados).
+     */
+    fun inviteToPlay(game: MyGameDto, friendIds: List<String>) {
         if (friendIds.isEmpty() || _state.value.inviting) return
+        val names = friendIds.mapNotNull { id ->
+            _state.value.friends.firstOrNull { it.friendId == id }?.fullName?.takeIf { it.isNotBlank() }
+        }
+        val message = if (names.isEmpty()) {
+            null
+        } else {
+            appContext.getString(R.string.post_play_invite, game.title, names.joinToString(", "))
+        }
         _state.value = _state.value.copy(inviting = true, error = null)
         viewModelScope.launch {
-            when (val r = games.inviteToPlay(gameId, friendIds)) {
+            when (val r = games.inviteToPlay(game.gameId, friendIds, message)) {
                 is AuthResult.Success -> _state.value = _state.value.copy(inviting = false)
                 is AuthResult.Error -> {
                     _state.value = _state.value.copy(inviting = false)
@@ -169,12 +183,13 @@ class LibraryViewModel(
         fun factory(
             games: GamesRepository,
             friends: FriendsRepository,
+            appContext: Context,
             onAuthExpired: () -> Unit
         ): ViewModelProvider.Factory =
             object : ViewModelProvider.Factory {
                 @Suppress("UNCHECKED_CAST")
                 override fun <T : ViewModel> create(modelClass: Class<T>): T =
-                    LibraryViewModel(games, friends, onAuthExpired) as T
+                    LibraryViewModel(games, friends, appContext, onAuthExpired) as T
             }
     }
 }
