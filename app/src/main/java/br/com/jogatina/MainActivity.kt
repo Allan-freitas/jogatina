@@ -124,7 +124,12 @@ class MainActivity : ComponentActivity() {
         }
     }
     private val libraryViewModel: LibraryViewModel by viewModels {
-        LibraryViewModel.factory(gamesRepository, friendsRepository, applicationContext) {
+        LibraryViewModel.factory(
+            gamesRepository,
+            friendsRepository,
+            applicationContext,
+            onPostPublished = { feedViewModel.refresh() }
+        ) {
             welcomeViewModel.logout()
         }
     }
@@ -273,6 +278,14 @@ fun JogatinaApp(
             notificationsViewModel?.refresh()
             showNotifications = true
             onOpenNotificationsHandled()
+        }
+    }
+
+    // Recarrega o feed ao entrar na Home, para mostrar posts criados em outras telas
+    // (ex.: post gerado ao marcar amigos para jogar na biblioteca).
+    LaunchedEffect(currentDestination) {
+        if (currentDestination == AppDestinations.HOME) {
+            feedViewModel?.refresh()
         }
     }
 

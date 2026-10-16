@@ -39,6 +39,7 @@ class LibraryViewModel(
     private val games: GamesRepository,
     private val friends: FriendsRepository,
     private val appContext: Context,
+    private val onPostPublished: () -> Unit,
     private val onAuthExpired: () -> Unit
 ) : ViewModel() {
 
@@ -107,7 +108,11 @@ class LibraryViewModel(
         _state.value = _state.value.copy(inviting = true, error = null)
         viewModelScope.launch {
             when (val r = games.inviteToPlay(game.gameId, friendIds, message)) {
-                is AuthResult.Success -> _state.value = _state.value.copy(inviting = false)
+                is AuthResult.Success -> {
+                    _state.value = _state.value.copy(inviting = false)
+                    // O servidor publicou o post na mesma chamada: avisa o feed para recarregar.
+                    if (message != null) onPostPublished()
+                }
                 is AuthResult.Error -> {
                     _state.value = _state.value.copy(inviting = false)
                     handleError(r)
@@ -184,12 +189,13 @@ class LibraryViewModel(
             games: GamesRepository,
             friends: FriendsRepository,
             appContext: Context,
+            onPostPublished: () -> Unit,
             onAuthExpired: () -> Unit
         ): ViewModelProvider.Factory =
             object : ViewModelProvider.Factory {
                 @Suppress("UNCHECKED_CAST")
                 override fun <T : ViewModel> create(modelClass: Class<T>): T =
-                    LibraryViewModel(games, friends, appContext, onAuthExpired) as T
+                    LibraryViewModel(games, friends, appContext, onPostPublished, onAuthExpired) as T
             }
     }
 }
